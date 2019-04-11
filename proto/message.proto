@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+service gringotts {
+ rpc HeartBeat (HeartBeatRequest) returns (HeartBeatResponse);
+}
+
+message HeartBeatRequest {
+    
+}
+
+message HeartBeatResponse {
+}
