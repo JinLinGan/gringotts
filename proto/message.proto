@@ -1,12 +1,41 @@
 syntax = "proto3";
 
 service gringotts {
- rpc HeartBeat (HeartBeatRequest) returns (HeartBeatResponse);
+  rpc HeartBeat(HeartBeatRequest) returns (HeartBeatResponse);
 }
 
 message HeartBeatRequest {
-    
+  string agnet_id = 1;
+  string host_name = 2;
+  int64 time = 3;
+}
+
+message MonitorInfo { repeated MonitorItem Items = 1; }
+message MonitorItem {
+  int64 task_id = 1;
+  int64 exec_interval_second = 2;
+  MonitorItemType type = 3;
+
+  SelfMonitorFunc self_func = 4;
+  string self_func_config = 5;
+
+  string third_party_func_name = 6;
+  string third_party_dependency_files = 7;
+}
+
+enum MonitorItemType {
+  SELF = 0;
+  THIRD_PARTY = 1;
+}
+
+enum SelfMonitorFunc {
+  CPU = 0;
+  MEM = 1;
 }
 
 message HeartBeatResponse {
+  int64 server_id = 1;
+  int64 config_version = 2;
+  int64 config_change_time = 3;
+  MonitorInfo monitor_info = 4;
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/jinlingan/gringotts/message"
@@ -19,9 +20,12 @@ func (s *gringottsServer) HeartBeat(context.Context, *message.HeartBeatRequest) 
 }
 
 const (
-	address     = "localhost:7777"
-	defaultName = "world"
+	address = "localhost:7777"
+	agentID = "123456"
 )
+
+var server message.GringottsClient
+var configVersion int64
 
 func main() {
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
@@ -29,13 +33,80 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := message.NewGringottsClient(conn)
+	server = message.NewGringottsClient(conn)
+	stop := make(chan int, 1)
+	go func() {
+		for {
+			select {
+			case <-time.Tick(5 * time.Second):
+				ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+				r, err := server.HeartBeat(ctx, newHeartBeatRequest())
+				if err != nil {
+					log.Printf("send HeartBeat with err: %v", err)
+					continue
+				}
+				if configVersion != r.ConfigVersion {
+					log.Printf("get HeartBeat response from server(id=%d) with config version = %d", r.ServerId, r.ConfigVersion)
+					log.Printf("not equal local version %d , reload", configVersion)
+					processConfig(r.MonitorInfo)
+					configVersion = r.ConfigVersion
+				}
+				// else {
+				// 	log.Printf(" equal local version %d , skip", configVersion)
+				// }
+			}
+		}
+	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r, err := c.HeartBeat(ctx, &message.HeartBeatRequest{})
-	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+	<-stop
+}
+
+var allTaskStopSignal chan int
+
+var doing = false
+
+func processConfig(info *message.MonitorInfo) {
+	if doing {
+		close(allTaskStopSignal)
+		log.Println("Close all running task")
 	}
-	log.Printf("Greeting: %s", r.String())
+	allTaskStopSignal = startAllAgent(info)
+}
+
+func startAllAgent(infos *message.MonitorInfo) chan int {
+	// wg := sync.WaitGroup{}
+	// wg.Add(len(infos.GetItems()))
+	doing = true
+	stop := make(chan int, 1)
+	for _, i := range infos.GetItems() {
+		go func(t *message.MonitorItem) {
+			for {
+				select {
+				case <-time.Tick(time.Duration(i.ExecIntervalSecond) * time.Second):
+					log.Printf("Task %d , get %s info %d \n", t.TaskId, t.SelfFunc, time.Now().Second())
+				case <-stop:
+					// wg.Done()
+					log.Printf("Stop Task ID %d", t.TaskId)
+					return
+				}
+			}
+		}(i)
+	}
+	// wg.Wait()
+	return stop
+
+}
+
+func newHeartBeatRequest() *message.HeartBeatRequest {
+	req := message.HeartBeatRequest{
+		AgnetId: agentID,
+		Time:    time.Now().UnixNano(),
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unkonw"
+		log.Printf("get hostname with err: %s", err)
+	}
+	req.HostName = hostname
+	return &req
 }

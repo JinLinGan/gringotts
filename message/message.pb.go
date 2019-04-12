@@ -24,7 +24,60 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
+type MonitorItemType int32
+
+const (
+	MonitorItemType_SELF        MonitorItemType = 0
+	MonitorItemType_THIRD_PARTY MonitorItemType = 1
+)
+
+var MonitorItemType_name = map[int32]string{
+	0: "SELF",
+	1: "THIRD_PARTY",
+}
+
+var MonitorItemType_value = map[string]int32{
+	"SELF":        0,
+	"THIRD_PARTY": 1,
+}
+
+func (x MonitorItemType) String() string {
+	return proto.EnumName(MonitorItemType_name, int32(x))
+}
+
+func (MonitorItemType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{0}
+}
+
+type SelfMonitorFunc int32
+
+const (
+	SelfMonitorFunc_CPU SelfMonitorFunc = 0
+	SelfMonitorFunc_MEM SelfMonitorFunc = 1
+)
+
+var SelfMonitorFunc_name = map[int32]string{
+	0: "CPU",
+	1: "MEM",
+}
+
+var SelfMonitorFunc_value = map[string]int32{
+	"CPU": 0,
+	"MEM": 1,
+}
+
+func (x SelfMonitorFunc) String() string {
+	return proto.EnumName(SelfMonitorFunc_name, int32(x))
+}
+
+func (SelfMonitorFunc) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{1}
+}
+
 type HeartBeatRequest struct {
+	AgnetId              string   `protobuf:"bytes,1,opt,name=agnet_id,json=agnetId,proto3" json:"agnet_id,omitempty"`
+	HostName             string   `protobuf:"bytes,2,opt,name=host_name,json=hostName,proto3" json:"host_name,omitempty"`
+	Time                 int64    `protobuf:"varint,3,opt,name=time,proto3" json:"time,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -55,17 +108,168 @@ func (m *HeartBeatRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_HeartBeatRequest proto.InternalMessageInfo
 
+func (m *HeartBeatRequest) GetAgnetId() string {
+	if m != nil {
+		return m.AgnetId
+	}
+	return ""
+}
+
+func (m *HeartBeatRequest) GetHostName() string {
+	if m != nil {
+		return m.HostName
+	}
+	return ""
+}
+
+func (m *HeartBeatRequest) GetTime() int64 {
+	if m != nil {
+		return m.Time
+	}
+	return 0
+}
+
+type MonitorInfo struct {
+	Items                []*MonitorItem `protobuf:"bytes,1,rep,name=Items,proto3" json:"Items,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *MonitorInfo) Reset()         { *m = MonitorInfo{} }
+func (m *MonitorInfo) String() string { return proto.CompactTextString(m) }
+func (*MonitorInfo) ProtoMessage()    {}
+func (*MonitorInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{1}
+}
+
+func (m *MonitorInfo) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MonitorInfo.Unmarshal(m, b)
+}
+func (m *MonitorInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MonitorInfo.Marshal(b, m, deterministic)
+}
+func (m *MonitorInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MonitorInfo.Merge(m, src)
+}
+func (m *MonitorInfo) XXX_Size() int {
+	return xxx_messageInfo_MonitorInfo.Size(m)
+}
+func (m *MonitorInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_MonitorInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MonitorInfo proto.InternalMessageInfo
+
+func (m *MonitorInfo) GetItems() []*MonitorItem {
+	if m != nil {
+		return m.Items
+	}
+	return nil
+}
+
+type MonitorItem struct {
+	TaskId                    int64           `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	ExecIntervalSecond        int64           `protobuf:"varint,2,opt,name=exec_interval_second,json=execIntervalSecond,proto3" json:"exec_interval_second,omitempty"`
+	Type                      MonitorItemType `protobuf:"varint,3,opt,name=type,proto3,enum=MonitorItemType" json:"type,omitempty"`
+	SelfFunc                  SelfMonitorFunc `protobuf:"varint,4,opt,name=self_func,json=selfFunc,proto3,enum=SelfMonitorFunc" json:"self_func,omitempty"`
+	SelfFuncConfig            string          `protobuf:"bytes,5,opt,name=self_func_config,json=selfFuncConfig,proto3" json:"self_func_config,omitempty"`
+	ThirdPartyFuncName        string          `protobuf:"bytes,6,opt,name=third_party_func_name,json=thirdPartyFuncName,proto3" json:"third_party_func_name,omitempty"`
+	ThirdPartyDependencyFiles string          `protobuf:"bytes,7,opt,name=third_party_dependency_files,json=thirdPartyDependencyFiles,proto3" json:"third_party_dependency_files,omitempty"`
+	XXX_NoUnkeyedLiteral      struct{}        `json:"-"`
+	XXX_unrecognized          []byte          `json:"-"`
+	XXX_sizecache             int32           `json:"-"`
+}
+
+func (m *MonitorItem) Reset()         { *m = MonitorItem{} }
+func (m *MonitorItem) String() string { return proto.CompactTextString(m) }
+func (*MonitorItem) ProtoMessage()    {}
+func (*MonitorItem) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{2}
+}
+
+func (m *MonitorItem) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MonitorItem.Unmarshal(m, b)
+}
+func (m *MonitorItem) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MonitorItem.Marshal(b, m, deterministic)
+}
+func (m *MonitorItem) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MonitorItem.Merge(m, src)
+}
+func (m *MonitorItem) XXX_Size() int {
+	return xxx_messageInfo_MonitorItem.Size(m)
+}
+func (m *MonitorItem) XXX_DiscardUnknown() {
+	xxx_messageInfo_MonitorItem.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MonitorItem proto.InternalMessageInfo
+
+func (m *MonitorItem) GetTaskId() int64 {
+	if m != nil {
+		return m.TaskId
+	}
+	return 0
+}
+
+func (m *MonitorItem) GetExecIntervalSecond() int64 {
+	if m != nil {
+		return m.ExecIntervalSecond
+	}
+	return 0
+}
+
+func (m *MonitorItem) GetType() MonitorItemType {
+	if m != nil {
+		return m.Type
+	}
+	return MonitorItemType_SELF
+}
+
+func (m *MonitorItem) GetSelfFunc() SelfMonitorFunc {
+	if m != nil {
+		return m.SelfFunc
+	}
+	return SelfMonitorFunc_CPU
+}
+
+func (m *MonitorItem) GetSelfFuncConfig() string {
+	if m != nil {
+		return m.SelfFuncConfig
+	}
+	return ""
+}
+
+func (m *MonitorItem) GetThirdPartyFuncName() string {
+	if m != nil {
+		return m.ThirdPartyFuncName
+	}
+	return ""
+}
+
+func (m *MonitorItem) GetThirdPartyDependencyFiles() string {
+	if m != nil {
+		return m.ThirdPartyDependencyFiles
+	}
+	return ""
+}
+
 type HeartBeatResponse struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	ServerId             int64        `protobuf:"varint,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	ConfigVersion        int64        `protobuf:"varint,2,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	ConfigChangeTime     int64        `protobuf:"varint,3,opt,name=config_change_time,json=configChangeTime,proto3" json:"config_change_time,omitempty"`
+	MonitorInfo          *MonitorInfo `protobuf:"bytes,4,opt,name=monitor_info,json=monitorInfo,proto3" json:"monitor_info,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
 func (m *HeartBeatResponse) Reset()         { *m = HeartBeatResponse{} }
 func (m *HeartBeatResponse) String() string { return proto.CompactTextString(m) }
 func (*HeartBeatResponse) ProtoMessage()    {}
 func (*HeartBeatResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{1}
+	return fileDescriptor_33c57e4bae7b9afd, []int{3}
 }
 
 func (m *HeartBeatResponse) XXX_Unmarshal(b []byte) error {
@@ -86,22 +290,79 @@ func (m *HeartBeatResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_HeartBeatResponse proto.InternalMessageInfo
 
+func (m *HeartBeatResponse) GetServerId() int64 {
+	if m != nil {
+		return m.ServerId
+	}
+	return 0
+}
+
+func (m *HeartBeatResponse) GetConfigVersion() int64 {
+	if m != nil {
+		return m.ConfigVersion
+	}
+	return 0
+}
+
+func (m *HeartBeatResponse) GetConfigChangeTime() int64 {
+	if m != nil {
+		return m.ConfigChangeTime
+	}
+	return 0
+}
+
+func (m *HeartBeatResponse) GetMonitorInfo() *MonitorInfo {
+	if m != nil {
+		return m.MonitorInfo
+	}
+	return nil
+}
+
 func init() {
+	proto.RegisterEnum("MonitorItemType", MonitorItemType_name, MonitorItemType_value)
+	proto.RegisterEnum("SelfMonitorFunc", SelfMonitorFunc_name, SelfMonitorFunc_value)
 	proto.RegisterType((*HeartBeatRequest)(nil), "HeartBeatRequest")
+	proto.RegisterType((*MonitorInfo)(nil), "MonitorInfo")
+	proto.RegisterType((*MonitorItem)(nil), "MonitorItem")
 	proto.RegisterType((*HeartBeatResponse)(nil), "HeartBeatResponse")
 }
 
 func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
-	// 106 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xcd, 0x4d, 0x2d, 0x2e,
-	0x4e, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x57, 0x12, 0xe2, 0x12, 0xf0, 0x48, 0x4d,
-	0x2c, 0x2a, 0x71, 0x4a, 0x4d, 0x2c, 0x09, 0x4a, 0x2d, 0x2c, 0x4d, 0x2d, 0x2e, 0x51, 0x12, 0xe6,
-	0x12, 0x44, 0x12, 0x2b, 0x2e, 0xc8, 0xcf, 0x2b, 0x4e, 0x35, 0xb2, 0xe7, 0xe2, 0x4c, 0x2f, 0xca,
-	0xcc, 0x4b, 0xcf, 0x2f, 0x29, 0x29, 0x16, 0x32, 0xe2, 0xe2, 0x84, 0xab, 0x10, 0x12, 0xd4, 0x43,
-	0x37, 0x41, 0x4a, 0x48, 0x0f, 0xc3, 0x80, 0x24, 0x36, 0xb0, 0x85, 0xc6, 0x80, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0x18, 0x31, 0x23, 0xad, 0x81, 0x00, 0x00, 0x00,
+	// 507 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x64, 0x93, 0xdd, 0x6e, 0xd3, 0x4e,
+	0x10, 0xc5, 0xeb, 0x3a, 0xcd, 0xc7, 0xa4, 0x4d, 0xdc, 0xd1, 0xff, 0x2f, 0x5c, 0xe0, 0x22, 0x0a,
+	0x20, 0x45, 0x55, 0x09, 0x34, 0x3c, 0x40, 0x05, 0x69, 0xa3, 0x5a, 0x22, 0x28, 0x72, 0x02, 0x12,
+	0x37, 0xac, 0x8c, 0x3d, 0x76, 0x56, 0xc4, 0xbb, 0xc6, 0xbb, 0x89, 0xc8, 0x8b, 0xf1, 0x12, 0xbc,
+	0x14, 0xf2, 0x3a, 0x5f, 0x0a, 0x77, 0x33, 0xf3, 0x3b, 0x47, 0x99, 0x9c, 0xf1, 0xc2, 0x45, 0x4a,
+	0x4a, 0x05, 0x09, 0xf5, 0xb3, 0x5c, 0x6a, 0xd9, 0xfd, 0x06, 0xce, 0x23, 0x05, 0xb9, 0xfe, 0x40,
+	0x81, 0xf6, 0xe9, 0xe7, 0x92, 0x94, 0xc6, 0x2b, 0xa8, 0x07, 0x89, 0x20, 0xcd, 0x78, 0xe4, 0x5a,
+	0x1d, 0xab, 0xd7, 0xf0, 0x6b, 0xa6, 0xf7, 0x22, 0x7c, 0x06, 0x8d, 0xb9, 0x54, 0x9a, 0x89, 0x20,
+	0x25, 0xf7, 0xd4, 0xb0, 0x7a, 0x31, 0xf8, 0x14, 0xa4, 0x84, 0x08, 0x15, 0xcd, 0x53, 0x72, 0xed,
+	0x8e, 0xd5, 0xb3, 0x7d, 0x53, 0x77, 0x6f, 0xa1, 0x39, 0x96, 0x82, 0x6b, 0x99, 0x7b, 0x22, 0x96,
+	0xd8, 0x85, 0x33, 0x4f, 0x53, 0xaa, 0x5c, 0xab, 0x63, 0xf7, 0x9a, 0x83, 0xf3, 0xfe, 0x16, 0x6a,
+	0x4a, 0xfd, 0x12, 0x75, 0xff, 0x9c, 0xee, 0x3d, 0x9a, 0x52, 0x7c, 0x02, 0x35, 0x1d, 0xa8, 0x1f,
+	0xdb, 0x6d, 0x6c, 0xbf, 0x5a, 0xb4, 0x5e, 0x84, 0x6f, 0xe1, 0x3f, 0xfa, 0x45, 0x21, 0xe3, 0x42,
+	0x53, 0xbe, 0x0a, 0x16, 0x4c, 0x51, 0x28, 0x45, 0x64, 0xf6, 0xb2, 0x7d, 0x2c, 0x98, 0xb7, 0x41,
+	0x53, 0x43, 0xf0, 0x25, 0x54, 0xf4, 0x3a, 0x2b, 0x37, 0x6c, 0x0d, 0x9c, 0xc3, 0x5f, 0x9f, 0xad,
+	0x33, 0xf2, 0x0d, 0xc5, 0xd7, 0xd0, 0x50, 0xb4, 0x88, 0x59, 0xbc, 0x14, 0xa1, 0x5b, 0xd9, 0x48,
+	0xa7, 0xb4, 0x88, 0x37, 0xf2, 0xd1, 0x52, 0x84, 0x7e, 0xbd, 0x90, 0x14, 0x15, 0xf6, 0xc0, 0xd9,
+	0xc9, 0x59, 0x28, 0x45, 0xcc, 0x13, 0xf7, 0xcc, 0x44, 0xd3, 0xda, 0x6a, 0x86, 0x66, 0x8a, 0xb7,
+	0xf0, 0xbf, 0x9e, 0xf3, 0x3c, 0x62, 0x59, 0x90, 0xeb, 0x75, 0x69, 0x30, 0x49, 0x56, 0x8d, 0x1c,
+	0x0d, 0x9c, 0x14, 0xac, 0x30, 0x99, 0x4c, 0xef, 0xe0, 0xf9, 0xa1, 0x25, 0xa2, 0x8c, 0x44, 0x44,
+	0x22, 0x5c, 0xb3, 0x98, 0x2f, 0x48, 0xb9, 0x35, 0xe3, 0xbc, 0xda, 0x3b, 0xef, 0x77, 0x8a, 0x51,
+	0x21, 0xe8, 0xfe, 0xb6, 0xe0, 0xf2, 0xe0, 0xc2, 0x2a, 0x93, 0x42, 0x51, 0x71, 0x47, 0x45, 0xf9,
+	0x8a, 0xf2, 0x7d, 0xaa, 0xf5, 0x72, 0xe0, 0x45, 0xf8, 0x0a, 0x5a, 0xe5, 0xdf, 0x60, 0x2b, 0xca,
+	0x15, 0x97, 0x62, 0x93, 0xe8, 0x45, 0x39, 0xfd, 0x52, 0x0e, 0xf1, 0x06, 0x70, 0x23, 0x0b, 0xe7,
+	0x81, 0x48, 0x88, 0x1d, 0x1c, 0xdf, 0x29, 0xc9, 0xd0, 0x80, 0x19, 0x4f, 0x09, 0xdf, 0xc0, 0x79,
+	0x5a, 0xc6, 0xc7, 0xb8, 0x88, 0xa5, 0xc9, 0xf5, 0xf0, 0x03, 0x10, 0xb1, 0xf4, 0x9b, 0xe9, 0xbe,
+	0xb9, 0xbe, 0x81, 0xf6, 0xd1, 0x79, 0xb0, 0x0e, 0x95, 0xe9, 0xc3, 0xc7, 0x91, 0x73, 0x82, 0x6d,
+	0x68, 0xce, 0x1e, 0x3d, 0xff, 0x9e, 0x4d, 0xde, 0xfb, 0xb3, 0xaf, 0x8e, 0x75, 0xfd, 0x02, 0xda,
+	0x47, 0x17, 0xc2, 0x1a, 0xd8, 0xc3, 0xc9, 0x67, 0xe7, 0xa4, 0x28, 0xc6, 0x0f, 0x63, 0xc7, 0x1a,
+	0xdc, 0x41, 0x23, 0xc9, 0xb9, 0x48, 0xa4, 0xd6, 0x0a, 0x07, 0xd0, 0xd8, 0xe5, 0x82, 0x97, 0xfd,
+	0xe3, 0x57, 0xf0, 0x14, 0xfb, 0xff, 0xc4, 0xf6, 0xbd, 0x6a, 0x1e, 0xcd, 0xbb, 0xbf, 0x01, 0x00,
+	0x00, 0xff, 0xff, 0x2a, 0x7f, 0x2c, 0x5e, 0x45, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
