@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -19,9 +20,9 @@ func (s *gringottsServer) HeartBeat(context.Context, *message.HeartBeatRequest) 
 	return &resp, nil
 }
 
-const (
+var (
 	address = "localhost:7777"
-	agentID = "123456"
+	agentID = string(rand.Intn(9999))
 )
 
 var server message.GringottsClient
@@ -39,7 +40,8 @@ func main() {
 		for {
 			select {
 			case <-time.Tick(5 * time.Second):
-				ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+				ctx, cancle := context.WithTimeout(context.Background(), time.Second*3)
+				defer cancle()
 				r, err := server.HeartBeat(ctx, newHeartBeatRequest())
 				if err != nil {
 					log.Printf("send HeartBeat with err: %v", err)

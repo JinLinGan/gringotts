@@ -12,6 +12,15 @@
             "program": "${workspaceFolder}/cmd/monitor-server/monitor-server.go",
             "env": {},
             "args": []
+        },
+        {
+            "name": "debug monitor agent",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/monitor-agent/monitor-agent.go",
+            "env": {},
+            "args": []
         }
     ]
 }
