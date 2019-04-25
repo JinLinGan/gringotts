@@ -8,6 +8,7 @@ import (
 var (
 	WorkDir       string = "/usr/local/gringotts"
 	ServerAddress string = "127.0.0.1:7777"
+	ExecuterDir   string = "executer"
 )
 
 func init() {
@@ -25,4 +26,8 @@ func SetWorkDir(path string) error {
 // GetWorkDir 获取工作目录名称
 func GetWorkDir() string {
 	return WorkDir
+}
+
+func GetExecuter() string {
+	return WorkDir + string(os.PathSeparator) + ExecuterDir
 }

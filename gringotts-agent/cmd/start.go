@@ -23,33 +23,32 @@ var startCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.PersistentFlags().StringP(WORK_DIR_FLAG_NAME, "w", "/usr/local/gringotts", "workdir used to save all program files")
-	startCmd.PersistentFlags().StringP(SERVER_ADDRESS_FLAG_NAME, "s", "127.0.0.1:7777", "server address")
+	startCmd.PersistentFlags().StringVarP(&workdir, "workdir", "w", "", "workdir used to save all program files (default \""+config.GetWorkDir()+"\")")
+	startCmd.PersistentFlags().StringVarP(&serverAddress, "server", "s", "", "server address  (default \""+config.ServerAddress+"\")")
 }
 
-const (
-	WORK_DIR_FLAG_NAME       = "workdir"
-	SERVER_ADDRESS_FLAG_NAME = "server"
+var (
+	workdir       string
+	serverAddress string
 )
 
 func startAgent(cmd *cobra.Command, args []string) error {
 
 	stop := make(chan int, 1)
+
 	// 根据命令行参数设置工作目录
-	w, err := cmd.Flags().GetString(WORK_DIR_FLAG_NAME)
-	if err != nil {
-		return err
-	}
-	if err := config.SetWorkDir(w); err != nil {
-		return err
+	if workdir != "" {
+		log.Printf("try to set workdir to %s", workdir)
+		if err := config.SetWorkDir(workdir); err != nil {
+			return err
+		}
 	}
 
 	// 根据命令行参数设置服务端地址
-	s, err := cmd.Flags().GetString(SERVER_ADDRESS_FLAG_NAME)
-	if err != nil {
-		return err
+	if serverAddress != "" {
+		log.Printf("set server address to %s", serverAddress)
+		config.ServerAddress = serverAddress
 	}
-	config.ServerAddress = s
 
 	//新建客户端
 	client, err := communication.NewClient(config.ServerAddress)
