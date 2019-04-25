@@ -5,16 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug monitor server",
+            "name": "debug monitor agent",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/cmd/monitor-server/monitor-server.go",
+            "program": "${workspaceFolder}/gringotts-agent/main.go",
             "env": {},
-            "args": []
+            "args": [
+                "start",
+                "-w",
+                "${workspaceFolder}"
+            ]
         },
         {
-            "name": "debug monitor agent",
+            "name": "debug monitor server",
             "type": "go",
             "request": "launch",
             "mode": "auto",

@@ -12,6 +12,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/jinlingan/gringotts/config"
 	"github.com/jinlingan/gringotts/message"
 )
 
@@ -67,21 +68,13 @@ func newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
 //HeartBeat 发送心跳
 func (s *Client) HeartBeat(ctx context.Context, agentID string) (*message.HeartBeatResponse, error) {
 	hb := newHeartBeatRequest(agentID)
+	fmt.Println(s.client)
 	return s.client.HeartBeat(ctx, hb)
 }
 
 //DownloadFile 下载文件
 func (s *Client) DownloadFile(filename string, sha1 string, destPath string) error {
-	tf, err := ioutil.TempFile("/Users/jinlin/code/golang/src/github.com/jinlingan/gringotts/tmp", "")
 
-	if err != nil {
-		return err
-	}
-
-	err = tf.Chmod(0755)
-	if err != nil {
-		return fmt.Errorf("can not change mod of temp file %s : %s", tf.Name(), err)
-	}
 	fcClient, err := s.client.DownloadFile(
 		context.Background(),
 		&message.File{
@@ -92,11 +85,17 @@ func (s *Client) DownloadFile(filename string, sha1 string, destPath string) err
 	if err != nil {
 		return err
 	}
-	// // tf, err := os.OpenFile(tempFile.Name(), os.O_WRONLY|os.O_CREATE, 0775)
-	// if err != nil {
-	// 	return err
-	// }
+	// TODO: 无论如何都要删除临时文件
+	tf, err := ioutil.TempFile(config.GetWorkDir()+"/tmp", "")
+	if err != nil {
+		return fmt.Errorf("can not create temp file in %s: %s", config.GetWorkDir()+"/tmp", err)
+	}
+	err = tf.Chmod(0755)
+	if err != nil {
+		return fmt.Errorf("can not change mod of temp file %s : %s", tf.Name(), err)
+	}
 	defer tf.Close()
+	defer os.Remove(tf.Name())
 
 	for {
 		fc, err := fcClient.Recv()
@@ -117,12 +116,8 @@ func (s *Client) DownloadFile(filename string, sha1 string, destPath string) err
 	err = os.Rename(tf.Name(), destPath+"/"+filename)
 
 	if err != nil {
-		rmerr := os.Remove(tf.Name())
-		if rmerr != nil {
-			return fmt.Errorf("mv file error : %q and remove temp file error %q", err, rmerr)
-		} else {
-			return fmt.Errorf("mv file error : %q", err)
-		}
+		return fmt.Errorf("mv file error : %q", err)
+
 	}
 	return nil
 }
