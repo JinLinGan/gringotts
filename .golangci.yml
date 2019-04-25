@@ -1,0 +1,10 @@
+linters-settings:
+  golint:
+    # minimal confidence for issues, default is 0.8
+    min-confidence: 0
+
+linters:
+  enable-all: true
+
+issues:
+  exclude-use-default: false

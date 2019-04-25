@@ -7,14 +7,15 @@ import (
 )
 
 var (
-	workPath            string = "/usr/local/gringotts"
-	serverAddress       string = "127.0.0.1:7777"
-	executerDirName     string = "executer"
-	downloadTempDirName string = "tmp"
+	workPath            = "/usr/local/gringotts"
+	serverAddress       = "127.0.0.1:7777"
+	executerDirName     = "executer"
+	downloadTempDirName = "tmp"
 )
 
-func init() {
-}
+const (
+	dirPermission = 0750
+)
 
 // SetWorkPath 设置工作目录
 func SetWorkPath(path string) error {
@@ -23,7 +24,7 @@ func SetWorkPath(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		log.Printf("dir %s not exist, to create it", path)
 		// 新建目录
-		if err := os.MkdirAll(path, 0775); err != nil {
+		if err := os.MkdirAll(path, dirPermission); err != nil {
 			return fmt.Errorf("can not make dir %s: %s", path, err)
 		}
 	}
@@ -33,7 +34,7 @@ func SetWorkPath(path string) error {
 	if _, err := os.Stat(GetExecuterPath()); os.IsNotExist(err) {
 		log.Printf("dir %s not exist, to create it", GetExecuterPath())
 		// 新建目录
-		if err := os.MkdirAll(GetExecuterPath(), 0775); err != nil {
+		if err := os.MkdirAll(GetExecuterPath(), dirPermission); err != nil {
 			return fmt.Errorf("can not make dir %s: %s", GetExecuterPath(), err)
 		}
 	}
@@ -41,7 +42,7 @@ func SetWorkPath(path string) error {
 	if _, err := os.Stat(GetDownloadTempPath()); os.IsNotExist(err) {
 		log.Printf("dir %s not exist, to create it", GetDownloadTempPath())
 		// 新建目录
-		if err := os.MkdirAll(GetDownloadTempPath(), 0775); err != nil {
+		if err := os.MkdirAll(GetDownloadTempPath(), dirPermission); err != nil {
 			return fmt.Errorf("can not make dir %s: %s", GetDownloadTempPath(), err)
 		}
 	}
