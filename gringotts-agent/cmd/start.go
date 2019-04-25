@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/jinlingan/gringotts/communication"
 	"github.com/jinlingan/gringotts/config"
+	"github.com/jinlingan/gringotts/gringotts-agent/communication"
 	"github.com/jinlingan/gringotts/message"
 
 	"github.com/spf13/cobra"
