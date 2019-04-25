@@ -23,12 +23,12 @@ var startCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.PersistentFlags().StringVarP(&workdir, "workdir", "w", "", "workdir used to save all program files (default \""+config.GetWorkDir()+"\")")
-	startCmd.PersistentFlags().StringVarP(&serverAddress, "server", "s", "", "server address  (default \""+config.ServerAddress+"\")")
+	startCmd.PersistentFlags().StringVarP(&workPath, "workpath", "w", "", "work path used to save all program files (default \""+config.GetWorkPath()+"\")")
+	startCmd.PersistentFlags().StringVarP(&serverAddress, "server", "s", "", "server address  (default \""+config.GetServerAddress()+"\")")
 }
 
 var (
-	workdir       string
+	workPath      string
 	serverAddress string
 )
 
@@ -37,9 +37,9 @@ func startAgent(cmd *cobra.Command, args []string) error {
 	stop := make(chan int, 1)
 
 	// 根据命令行参数设置工作目录
-	if workdir != "" {
-		log.Printf("try to set workdir to %s", workdir)
-		if err := config.SetWorkDir(workdir); err != nil {
+	if workPath != "" {
+		log.Printf("try to set work path to %s", workPath)
+		if err := config.SetWorkPath(workPath); err != nil {
 			return err
 		}
 	}
@@ -47,17 +47,17 @@ func startAgent(cmd *cobra.Command, args []string) error {
 	// 根据命令行参数设置服务端地址
 	if serverAddress != "" {
 		log.Printf("set server address to %s", serverAddress)
-		config.ServerAddress = serverAddress
+		config.SetServerAddress(serverAddress)
 	}
 
 	//新建客户端
-	client, err := communication.NewClient(config.ServerAddress)
+	client, err := communication.NewClient(config.GetServerAddress())
 	if err != nil {
-		log.Printf("can not communicate with server %s ,err is %s", config.ServerAddress, err)
+		log.Printf("can not communicate with server %s ,err is %s", config.GetServerAddress(), err)
 	}
 
 	if err := downloadFile(client, "main", "aaaa"); err != nil {
-		log.Printf("can not download file from  server %s ,err is %s", config.ServerAddress, err)
+		log.Printf("can not download file from  server %s ,err is %s", config.GetServerAddress(), err)
 	}
 
 	//开始发送心跳
@@ -67,7 +67,7 @@ func startAgent(cmd *cobra.Command, args []string) error {
 }
 
 func downloadFile(client *communication.Client, filename, sha1 string) error {
-	return client.DownloadFile(filename, sha1, "./depend")
+	return client.DownloadFile(filename, sha1, config.GetExecuterPath())
 }
 
 func sendHeartBeat(client *communication.Client) {

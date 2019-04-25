@@ -86,9 +86,9 @@ func (s *Client) DownloadFile(filename string, sha1 string, destPath string) err
 		return err
 	}
 	// TODO: 无论如何都要删除临时文件
-	tf, err := ioutil.TempFile(config.GetWorkDir()+"/tmp", "")
+	tf, err := ioutil.TempFile(config.GetDownloadTempPath(), "")
 	if err != nil {
-		return fmt.Errorf("can not create temp file in %s: %s", config.GetWorkDir()+"/tmp", err)
+		return fmt.Errorf("can not create temp file in %s: %s", config.GetDownloadTempPath(), err)
 	}
 	err = tf.Chmod(0755)
 	if err != nil {
