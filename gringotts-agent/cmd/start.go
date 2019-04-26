@@ -23,8 +23,18 @@ var startCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.PersistentFlags().StringVarP(&workPath, "workpath", "w", "", "work path used to save all program files (default \""+config.GetWorkPath()+"\")")
-	startCmd.PersistentFlags().StringVarP(&serverAddress, "server", "s", "", "server address  (default \""+config.GetServerAddress()+"\")")
+	startCmd.PersistentFlags().StringVarP(
+		&workPath,
+		"workpath",
+		"w",
+		"",
+		"work path used to save all program files (default \""+config.GetWorkPath()+"\")")
+	startCmd.PersistentFlags().StringVarP(
+		&serverAddress,
+		"server",
+		"s",
+		"",
+		"server address  (default \""+config.GetServerAddress()+"\")")
 }
 
 var (

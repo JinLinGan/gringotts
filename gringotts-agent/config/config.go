@@ -1,24 +1,43 @@
+// Package config 配置
 package config
 
 import (
 	"fmt"
 	"log"
 	"os"
-)
-
-var (
-	workPath            = "/usr/local/gringotts"
-	serverAddress       = "127.0.0.1:7777"
-	executerDirName     = "executer"
-	downloadTempDirName = "tmp"
+	"runtime"
 )
 
 const (
 	dirPermission = 0750
 )
 
+// AgentConfig Agent 的配置
+type AgentConfig struct {
+	workPath            string
+	serverAddress       string
+	executerDirName     string
+	downloadTempDirName string
+}
+
+// NewConfig 新建配置
+func NewConfig() *AgentConfig {
+
+	c := &AgentConfig{
+		workPath:            "/usr/local/gringotts",
+		serverAddress:       "127.0.0.1:7777",
+		executerDirName:     "executer",
+		downloadTempDirName: "tmp",
+	}
+
+	if runtime.GOOS == "windows" {
+		c.workPath = `c:\gringotts-agent`
+	}
+	return c
+}
+
 // SetWorkPath 设置工作目录
-func SetWorkPath(path string) error {
+func (c *AgentConfig) SetWorkPath(path string) error {
 
 	// 判断 path 是否存在
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -28,22 +47,22 @@ func SetWorkPath(path string) error {
 			return fmt.Errorf("can not make dir %s: %s", path, err)
 		}
 	}
-	workPath = path
+	c.workPath = path
 
 	//create executerDir
-	if _, err := os.Stat(GetExecuterPath()); os.IsNotExist(err) {
-		log.Printf("dir %s not exist, to create it", GetExecuterPath())
+	if _, err := os.Stat(c.GetExecuterPath()); os.IsNotExist(err) {
+		log.Printf("dir %s not exist, to create it", c.GetExecuterPath())
 		// 新建目录
-		if err := os.MkdirAll(GetExecuterPath(), dirPermission); err != nil {
-			return fmt.Errorf("can not make dir %s: %s", GetExecuterPath(), err)
+		if err := os.MkdirAll(c.GetExecuterPath(), dirPermission); err != nil {
+			return fmt.Errorf("can not make dir %s: %s", c.GetExecuterPath(), err)
 		}
 	}
 	//create downloadTempDir
-	if _, err := os.Stat(GetDownloadTempPath()); os.IsNotExist(err) {
-		log.Printf("dir %s not exist, to create it", GetDownloadTempPath())
+	if _, err := os.Stat(c.GetDownloadTempPath()); os.IsNotExist(err) {
+		log.Printf("dir %s not exist, to create it", c.GetDownloadTempPath())
 		// 新建目录
-		if err := os.MkdirAll(GetDownloadTempPath(), dirPermission); err != nil {
-			return fmt.Errorf("can not make dir %s: %s", GetDownloadTempPath(), err)
+		if err := os.MkdirAll(c.GetDownloadTempPath(), dirPermission); err != nil {
+			return fmt.Errorf("can not make dir %s: %s", c.GetDownloadTempPath(), err)
 		}
 	}
 
@@ -51,22 +70,27 @@ func SetWorkPath(path string) error {
 }
 
 // GetWorkPath 获取工作目录名称
-func GetWorkPath() string {
-	return workPath
+func (c *AgentConfig) GetWorkPath() string {
+	return c.workPath
 }
 
-func GetExecuterPath() string {
-	return workPath + string(os.PathSeparator) + executerDirName
+// GetExecuterPath 获取执行器目录
+func (c *AgentConfig) GetExecuterPath() string {
+	return c.workPath + string(os.PathSeparator) + c.executerDirName
 
 }
-func GetDownloadTempPath() string {
-	return workPath + string(os.PathSeparator) + downloadTempDirName
+
+// GetDownloadTempPath 获取用于存放下载临时文件的路径
+func (c *AgentConfig) GetDownloadTempPath() string {
+	return c.workPath + string(os.PathSeparator) + c.downloadTempDirName
 }
 
-func GetServerAddress() string {
-	return serverAddress
+// GetServerAddress 获取服务器路径
+func (c *AgentConfig) GetServerAddress() string {
+	return c.serverAddress
 }
 
-func SetServerAddress(s string) {
-	serverAddress = s
+// SetServerAddress 设置服务器路径
+func (c *AgentConfig) SetServerAddress(s string) {
+	c.serverAddress = s
 }
