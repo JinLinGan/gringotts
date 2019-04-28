@@ -42,7 +42,7 @@ func praseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 
 	cfg, err := config.NewConfig(w)
 	if err != nil {
-		log.Fatalf("can not create agent config: %s", err)
+		log.Printf("create agent with err: %s", err)
 	}
 
 	s, err := flags.GetString(serverAddressFlagName)

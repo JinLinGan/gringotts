@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/jinlingan/gringotts/gringotts-agent/model"
+
 	"github.com/jinlingan/gringotts/gringotts-agent/communication"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
 )
@@ -56,7 +58,9 @@ func (a *Agent) Start() error {
 // regist 注册 agent
 func (a *Agent) regist() error {
 	//TODO finish this
-	_, err := a.apiClient.Regist("", nil)
+	_, err := a.apiClient.Regist("aaaa", &model.NetInfos{
+		"eth0": {},
+	})
 	return err
 }
 
