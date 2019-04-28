@@ -3,6 +3,7 @@ syntax = "proto3";
 service gringotts {
   rpc HeartBeat(HeartBeatRequest) returns (HeartBeatResponse);
   rpc DownloadFile(File) returns (stream FileChunk);
+  rpc Regist(RegistRequest) returns (RegistResponse);
 }
 
 message File {
@@ -46,4 +47,18 @@ message HeartBeatResponse {
   int64 config_version = 2;
   int64 config_change_time = 3;
   MonitorInfo monitor_info = 4;
+}
+
+message RegistRequest {
+  message NetInfo {
+    string ip_address = 1;
+    string mac_address = 2;
+  }
+  string host_name = 1;
+  repeated NetInfo net_info = 2;
+}
+
+message RegistResponse {
+  string agnet_id = 1;
+  int64 config_version = 2;
 }

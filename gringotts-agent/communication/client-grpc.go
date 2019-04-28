@@ -1,3 +1,4 @@
+// Package communication 用于与服务端通信，暂时只支持 GRPC
 package communication
 
 import (
@@ -9,13 +10,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/jinlingan/gringotts/gringotts-agent/model"
+
 	"google.golang.org/grpc"
 
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
 	"github.com/jinlingan/gringotts/message"
 )
 
-var instance *Client
+// var instance *Client
 
 // var mux sync.Mutex
 
@@ -26,29 +29,26 @@ type Client struct {
 }
 
 // NewClient 使用单例模式新建 Client
-func NewClient(address string) (*Client, error) {
+func NewClient(cfg *config.AgentConfig) (*Client, error) {
 
-	// if instance == nil {
-	// 	mux.Lock()
-	// 	defer mux.Unlock()
-	if instance == nil {
-		conn, err := grpc.Dial(address, grpc.WithInsecure())
-		if err != nil {
-			return nil, err
-		}
-
-		instance = &Client{
-			conn:   conn,
-			client: message.NewGringottsClient(conn)}
+	conn, err := grpc.Dial(cfg.GetServerAddress(), grpc.WithInsecure())
+	if err != nil {
+		return nil, err
 	}
 
-	// }
+	instance := &Client{
+		conn:   conn,
+		client: message.NewGringottsClient(conn),
+	}
+
 	return instance, nil
 }
 
 //Close 关闭连接
-func (s *Client) Close() {
-	s.conn.Close()
+func (c *Client) Close() {
+	if err := c.conn.Close(); err != nil {
+		log.Printf("close server conn error: %v", err)
+	}
 }
 
 func newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
@@ -66,16 +66,16 @@ func newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
 }
 
 //HeartBeat 发送心跳
-func (s *Client) HeartBeat(ctx context.Context, agentID string) (*message.HeartBeatResponse, error) {
+func (c *Client) HeartBeat(ctx context.Context, agentID string) (*message.HeartBeatResponse, error) {
 	hb := newHeartBeatRequest(agentID)
-	fmt.Println(s.client)
-	return s.client.HeartBeat(ctx, hb)
+	fmt.Println(c.client)
+	return c.client.HeartBeat(ctx, hb)
 }
 
 //DownloadFile 下载文件
-func (s *Client) DownloadFile(filename string, sha1 string, destPath string) error {
+func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tempPath string) error {
 
-	fcClient, err := s.client.DownloadFile(
+	fcClient, err := c.client.DownloadFile(
 		context.Background(),
 		&message.File{
 			FileName: filename,
@@ -85,17 +85,15 @@ func (s *Client) DownloadFile(filename string, sha1 string, destPath string) err
 	if err != nil {
 		return err
 	}
-	// TODO: 无论如何都要删除临时文件
-	tf, err := ioutil.TempFile(config.GetDownloadTempPath(), "")
+
+	tf, err := ioutil.TempFile(tempPath, "")
 	if err != nil {
-		return fmt.Errorf("can not create temp file in %s: %s", config.GetDownloadTempPath(), err)
+		return fmt.Errorf("can not create temp file in %s: %s", tempPath, err)
 	}
 	err = tf.Chmod(0755)
 	if err != nil {
 		return fmt.Errorf("can not change mod of temp file %s : %s", tf.Name(), err)
 	}
-	defer tf.Close()
-	defer os.Remove(tf.Name())
 
 	for {
 		fc, err := fcClient.Recv()
@@ -113,11 +111,50 @@ func (s *Client) DownloadFile(filename string, sha1 string, destPath string) err
 		}
 	}
 
-	err = os.Rename(tf.Name(), destPath+"/"+filename)
+	err = os.Rename(tf.Name(), destPath+string(os.PathSeparator)+filename)
 
 	if err != nil {
 		return fmt.Errorf("mv file error : %q", err)
 
 	}
+
+	if err := tf.Close(); err != nil {
+		log.Printf("can not close tmp file %s: %v", tf.Name(), err)
+	}
+	if err := os.Remove(tf.Name()); err != nil {
+		log.Printf("can not remove tmp file %s: %v", tf.Name(), err)
+	}
+
 	return nil
+}
+
+//Regist 注册 agent
+func (c *Client) Regist(hostName string, netInfos *model.NetInfos) (*model.RegistResp, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	req := &message.RegistRequest{
+		HostName: hostName,
+	}
+	req.NetInfo = make([]*message.RegistRequest_NetInfo, len(*netInfos))
+
+	index := 0
+	for _, v := range *netInfos {
+		n := &message.RegistRequest_NetInfo{
+			IpAddress:  v.IPAddress,
+			MacAddress: v.MacAddress,
+		}
+		req.NetInfo[index] = n
+		index++
+	}
+
+	resp, err := c.client.Regist(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	ret := &model.RegistResp{
+		AgnetID:       resp.AgnetId,
+		ConfigVersion: resp.ConfigVersion,
+	}
+	return ret, nil
 }
