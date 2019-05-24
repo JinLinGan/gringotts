@@ -9,17 +9,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/jinlingan/gringotts/message"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
 
+// GringottsServer 服务器
 type GringottsServer struct {
 	listenAddress string
 	grpcServer    *grpc.Server
 	serverID      string
 }
 
+//NewServer 新建 Server 对象
 func NewServer(address string, serverID string) (*GringottsServer, error) {
 
 	server := &GringottsServer{
@@ -31,6 +35,7 @@ func NewServer(address string, serverID string) (*GringottsServer, error) {
 
 }
 
+//Serve 开始提供服务
 func (s *GringottsServer) Serve() error {
 	lis, err := net.Listen("tcp", s.listenAddress)
 	if err != nil {
@@ -38,10 +43,15 @@ func (s *GringottsServer) Serve() error {
 	}
 	return s.grpcServer.Serve(lis)
 }
-func (s *GringottsServer) HeartBeat(ctx context.Context, req *message.HeartBeatRequest) (*message.HeartBeatResponse, error) {
+
+//HeartBeat 接收心跳
+func (s *GringottsServer) HeartBeat(ctx context.Context,
+	req *message.HeartBeatRequest) (*message.HeartBeatResponse, error) {
 	log.Printf("get HeartBeat message from agent(id=%s,hostname=%s)", req.GetAgnetId(), req.GetHostName())
 	return s.newHeartBeatResponse(), nil
 }
+
+//DownloadFile 下载文件
 func (s *GringottsServer) DownloadFile(f *message.File, fs message.Gringotts_DownloadFileServer) error {
 	rf, err := os.Open("/Users/jinlin/code/golang/src/github.com/jinlingan/gringotts/testfile/" + f.GetFileName())
 
@@ -74,6 +84,11 @@ func (s *GringottsServer) DownloadFile(f *message.File, fs message.Gringotts_Dow
 		return err
 	}
 	return nil
+}
+
+// Regist agent 注册 - 暂未实现
+func (s *GringottsServer) Regist(ctx context.Context, req *message.RegistRequest) (*message.RegistResponse, error) {
+	return nil, errors.Errorf("not implement")
 }
 
 func (s *GringottsServer) newHeartBeatResponse() *message.HeartBeatResponse {
