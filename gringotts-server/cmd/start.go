@@ -21,12 +21,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// startCmd represents the start command
-var startCmd = &cobra.Command{
-	Use:   "start",
-	Short: "start Gringotts Server",
-	Long:  `start Gringotts Server`,
-	RunE:  start,
+func newStartCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "start",
+		Short: "start Gringotts Server",
+		Long:  `start Gringotts Server`,
+		RunE:  start,
+	}
 }
 
 const (

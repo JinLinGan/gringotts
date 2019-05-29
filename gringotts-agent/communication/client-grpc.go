@@ -18,10 +18,6 @@ import (
 	"github.com/jinlingan/gringotts/message"
 )
 
-// var instance *Client
-
-// var mux sync.Mutex
-
 // Client 用于表示服务，负责与服务器通信
 type Client struct {
 	conn   *grpc.ClientConn

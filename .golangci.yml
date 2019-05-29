@@ -11,7 +11,7 @@ issues:
 
   exclude-rules:
     # Exclude some linters from running on tests files.
-    - path: /cmd/
-      linters:
-        - gochecknoglobals
-      text: "rootCmd|startCmd"
+    # - path: gringotts-server/cmd/root.go
+    #   linters:
+    #     - gochecknoglobals
+    #   text: "rootCmd"

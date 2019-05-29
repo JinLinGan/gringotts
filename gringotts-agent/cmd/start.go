@@ -10,19 +10,19 @@ import (
 )
 
 // startCmd represents the start command
-var startCmd = &cobra.Command{
-	Use:   "start",
-	Short: "start agent",
-	// Long: `start agent`,
-	RunE: praseFlagsAndStartAgent,
-}
 
-func initStartCmd() {
-	rootCmd.AddCommand(startCmd)
+func newStartCmd() *cobra.Command {
+	startCmd := &cobra.Command{
+		Use:   "start",
+		Short: "start agent",
+		// Long: `start agent`,
+		RunE: praseFlagsAndStartAgent,
+	}
 	startCmd.PersistentFlags().StringP("workpath", "w", "",
 		"work path used to save all program files (default \""+config.GetDefaultWorkPath()+"\")")
 	startCmd.PersistentFlags().StringP("server", "s", "",
 		"server address  (default \""+config.GetDefaultServerAddress()+"\")")
+	return startCmd
 }
 
 const (

@@ -21,15 +21,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "gringotts-server",
-	Short: "Gringotts Server",
-	Long:  `Gringotts Server`,
-}
-
 // Execute 执行
 func Execute() {
-	rootCmd.AddCommand(startCmd)
+	var rootCmd = &cobra.Command{
+		Use:   "gringotts-server",
+		Short: "Gringotts Server",
+		Long:  `Gringotts Server`,
+	}
+	rootCmd.AddCommand(newStartCmd())
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
