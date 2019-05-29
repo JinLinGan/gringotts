@@ -49,12 +49,12 @@ func (c *Client) Close() {
 
 func newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
 	req := message.HeartBeatRequest{
-		AgnetId: agentID,
+		AgentId: agentID,
 		Time:    time.Now().UnixNano(),
 	}
 	hostname, err := os.Hostname()
 	if err != nil {
-		hostname = "unkonw"
+		hostname = "unknown"
 		log.Printf("get hostname with err: %s", err)
 	}
 	req.HostName = hostname
@@ -98,7 +98,7 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 			break
 		}
 		if err != nil {
-			log.Printf("get unknow error from server: %s", err)
+			log.Printf("get unknown error from server: %s", err)
 			return err
 		}
 		if _, err := tf.Write(fc.GetData()); err != nil {
@@ -124,19 +124,19 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 	return nil
 }
 
-//Regist 注册 agent
-func (c *Client) Regist(hostName string, netInfos *model.NetInfos) (*model.RegistResp, error) {
+//Register 注册 agent
+func (c *Client) Register(hostName string, netInfos *model.NetInfos) (*model.RegisterResp, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	req := &message.RegistRequest{
+	req := &message.RegisterRequest{
 		HostName: hostName,
 	}
-	req.NetInfo = make([]*message.RegistRequest_NetInfo, len(*netInfos))
+	req.NetInfo = make([]*message.RegisterRequest_NetInfo, len(*netInfos))
 
 	index := 0
 	for _, v := range *netInfos {
-		n := &message.RegistRequest_NetInfo{
+		n := &message.RegisterRequest_NetInfo{
 			IpAddress:  v.IPAddress,
 			MacAddress: v.MacAddress,
 		}
@@ -144,12 +144,12 @@ func (c *Client) Regist(hostName string, netInfos *model.NetInfos) (*model.Regis
 		index++
 	}
 
-	resp, err := c.client.Regist(ctx, req)
+	resp, err := c.client.Register(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	ret := &model.RegistResp{
-		AgnetID:       resp.AgnetId,
+	ret := &model.RegisterResp{
+		AgentID:       resp.AgentId,
 		ConfigVersion: resp.ConfigVersion,
 	}
 	return ret, nil

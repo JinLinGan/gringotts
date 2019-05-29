@@ -47,7 +47,7 @@ func (s *GringottsServer) Serve() error {
 //HeartBeat 接收心跳
 func (s *GringottsServer) HeartBeat(ctx context.Context,
 	req *message.HeartBeatRequest) (*message.HeartBeatResponse, error) {
-	log.Printf("get HeartBeat message from agent(id=%s,hostname=%s)", req.GetAgnetId(), req.GetHostName())
+	log.Printf("get HeartBeat message from agent(id=%s,hostname=%s)", req.GetAgentId(), req.GetHostName())
 	return s.newHeartBeatResponse(), nil
 }
 
@@ -86,8 +86,10 @@ func (s *GringottsServer) DownloadFile(f *message.File, fs message.Gringotts_Dow
 	return nil
 }
 
-// Regist agent 注册 - 暂未实现
-func (s *GringottsServer) Regist(ctx context.Context, req *message.RegistRequest) (*message.RegistResponse, error) {
+// Register agent 注册 - 暂未实现
+func (s *GringottsServer) Register(
+	ctx context.Context,
+	req *message.RegisterRequest) (*message.RegisterResponse, error) {
 	return nil, errors.Errorf("not implement")
 }
 

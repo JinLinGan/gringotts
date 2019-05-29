@@ -41,8 +41,8 @@ func (a *Agent) Start() error {
 	if !a.cfg.IsRegistered() {
 
 		// 启动注册流程
-		if err := a.regist(); err != nil {
-			return fmt.Errorf("regist agent to server %s error: %s", a.cfg.GetServerAddress(), err)
+		if err := a.register(); err != nil {
+			return fmt.Errorf("register agent to server %s error: %s", a.cfg.GetServerAddress(), err)
 		}
 	}
 
@@ -55,10 +55,10 @@ func (a *Agent) Start() error {
 	return nil
 }
 
-// regist 注册 agent
-func (a *Agent) regist() error {
+// register 注册 agent
+func (a *Agent) register() error {
 	//TODO finish this
-	_, err := a.apiClient.Regist("aaaa", &model.NetInfos{
+	_, err := a.apiClient.Register("aaaa", &model.NetInfos{
 		"eth0": {},
 	})
 	return err
@@ -76,7 +76,7 @@ func (a *Agent) sendHeartBeat() {
 		// set timer
 		start := time.Now()
 		//send HeartBeat
-		ctx, cancle := context.WithTimeout(context.Background(), time.Second*30)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		r, err := a.apiClient.HeartBeat(ctx, a.cfg.GetAgentID())
 		//
 		log.Printf("send HeartBeat (%s)", time.Since(start))
@@ -95,83 +95,7 @@ func (a *Agent) sendHeartBeat() {
 
 		}
 		<-ticker.C
-		cancle()
+		cancel()
 
 	}
 }
-
-// func grpcSpeedTest(rpcDurations *prometheus.SummaryVec) {
-// 	count := 1000
-
-// 	conn, err := grpc.Dial(address, grpc.WithInsecure())
-// 	if err != nil {
-// 		log.Fatalf("did not connect: %v", err)
-// 	}
-// 	server := message.NewGringottsa.apiClient(conn)
-// 	for i := 1; i <= count; i++ {
-// 		go func() {
-// 			for true {
-// 				start := time.Now()
-// 				server.HeartBeat(context.Background())
-// 				rpcDurations.WithLabelValues("normal").Observe(float64(time.Since(start).Nanoseconds()))
-// 			}
-// 		}()
-// 	}
-// }
-
-// func performanceTest() {
-// 	http.Handle("/metrics", promhttp.Handler())
-// 	rpcDurations := prometheus.NewSummaryVec(
-// 		prometheus.SummaryOpts{
-// 			Name:       "grpc_durations_seconds",
-// 			Help:       "GRPC latency distributions.",
-// 			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.91: 0.01,
-//											0.92: 0.01, 0.93: 0.01, 0.94: 0.01,
-//											0.95: 0.01, 0.96: 0.01, 0.97: 0.01,
-//											0.98: 0.01, 0.99: 0.001},
-// 		},
-// 		[]string{"service"},
-// 	)
-// 	prometheus.MustRegister(rpcDurations)
-// 	go func() {
-// 		log.Fatal(http.ListenAndServe(":9999", nil))
-// 	}()
-// 	grpcSpeedTest(rpcDurations)
-// }
-
-// var allTaskStopSignal chan int
-
-// var doing = false
-
-// func processConfig(info *message.MonitorInfo) {
-// 	if doing {
-// 		close(allTaskStopSignal)
-// 		log.Println("Close all running task")
-// 	}
-// 	allTaskStopSignal = startAllAgent(info)
-// }
-
-// func startAllAgent(infos *message.MonitorInfo) chan int {
-// 	// wg := sync.WaitGroup{}
-// 	// wg.Add(len(infos.GetItems()))
-// 	doing = true
-// 	stop := make(chan int, 1)
-// 	for _, i := range infos.GetItems() {
-// 		go func(t *message.MonitorItem) {
-// 			tick := time.NewTicker(time.Duration(t.ExecIntervalSecond) * time.Second)
-// 			for {
-// 				select {
-// 				case <-tick.C:
-// 					log.Printf("Task %d , get %s info %d \n", t.TaskId, t.SelfFunc, time.Now().Second())
-// 				case <-stop:
-// 					// wg.Done()
-// 					log.Printf("Stop Task ID %d", t.TaskId)
-// 					return
-// 				}
-// 			}
-// 		}(i)
-// 	}
-// 	// wg.Wait()
-// 	return stop
-
-// }
