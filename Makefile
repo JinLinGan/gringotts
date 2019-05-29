@@ -10,3 +10,9 @@ check:
 tidy:
 	GO111MODULE=on  go mod tidy
 	GO111MODULE=on  go mod vendor
+
+run-agent:
+	go run -race ./gringotts-agent/main.go start
+
+test:
+	go test -race ./...

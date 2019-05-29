@@ -14,7 +14,7 @@
             "args": [
                 "start",
                 "-w",
-                "${workspaceFolder}"
+                "${workspaceFolder}/aaa"
             ]
         },
         {
