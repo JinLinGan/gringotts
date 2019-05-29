@@ -1,8 +1,12 @@
 build:
 	protoc -I proto proto/message.proto  --go_out=plugins=grpc:message
 
-check-global-var:
-	golangci-lint run --no-config  -E gochecknoglobals  ./...
+check-all:
+	golangci-lint run --no-config  --enable-all  ./...
 
 check:
 	golangci-lint run  ./...
+
+tidy:
+	GO111MODULE=on  go mod tidy
+	GO111MODULE=on  go mod vendor
