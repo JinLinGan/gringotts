@@ -13,6 +13,8 @@ tidy:
 
 run-agent:
 	go run -race ./gringotts-agent/main.go start
+run-server:
+	go run -race ./gringotts-server/main.go start
 
 test:
 	go test -race ./...

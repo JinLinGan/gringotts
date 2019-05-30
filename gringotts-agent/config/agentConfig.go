@@ -14,7 +14,10 @@ import (
 
 const (
 	// PermissionMode 代表文件的默认权限
-	PermissionMode = 0750
+	PermissionMode       = 0750
+	defaultServerAddress = "gringotts-server:7777"
+	defaultWinWorkPath   = `c:\gringotts-agent`
+	defaultLinuxWorkPath = "/usr/local/gringotts"
 )
 
 // AgentConfig Agent 的配置
@@ -37,14 +40,14 @@ type AgentRunningInfo struct {
 //GetDefaultWorkPath 获取默认的工作目录
 func GetDefaultWorkPath() string {
 	if runtime.GOOS == "windows" {
-		return `c:\gringotts-agent`
+		return defaultWinWorkPath
 	}
-	return "/usr/local/gringotts"
+	return defaultLinuxWorkPath
 }
 
 //GetDefaultServerAddress 获取默认的服务器地址
 func GetDefaultServerAddress() string {
-	return "127.0.0.1:7777"
+	return defaultServerAddress
 }
 
 // NewConfig 新建配置

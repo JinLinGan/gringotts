@@ -19,10 +19,10 @@ func newStartCmd() *cobra.Command {
 		// Long: `start agent`,
 		RunE: parseFlagsAndStartAgent,
 	}
-	startCmd.PersistentFlags().StringP("workpath", "w", "",
-		"work path used to save all program files (default \""+config.GetDefaultWorkPath()+"\")")
-	startCmd.PersistentFlags().StringP("server", "s", "",
-		"server address  (default \""+config.GetDefaultServerAddress()+"\")")
+	startCmd.PersistentFlags().StringP(workPathFlagName, "w", config.GetDefaultWorkPath(),
+		"work path used to save all program files")
+	startCmd.PersistentFlags().StringP(serverAddressFlagName, "s", config.GetDefaultServerAddress(),
+		"server address")
 	return startCmd
 }
 

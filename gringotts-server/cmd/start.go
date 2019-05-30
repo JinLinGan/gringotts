@@ -17,21 +17,27 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/jinlingan/gringotts/gringotts-server/config"
 	"github.com/jinlingan/gringotts/gringotts-server/server"
 	"github.com/spf13/cobra"
 )
 
 func newStartCmd() *cobra.Command {
-	return &cobra.Command{
+	startCmd := &cobra.Command{
 		Use:   "start",
 		Short: "start Gringotts Server",
 		Long:  `start Gringotts Server`,
 		RunE:  start,
 	}
+	startCmd.PersistentFlags().StringP(listenerPortFlagName, "p", config.GetDefaultListenerPort(), "listener port")
+	startCmd.PersistentFlags().StringP(externalAddressFlagName,"a",config.GetDefaultExternalAddress(),"external address")
+	return startCmd
 }
 
 const (
-	serverID = "99"
+	listenerPortFlagName = "port"
+	externalAddressFlagName = "address"
+	serverID             = "99"
 )
 
 func start(cmd *cobra.Command, args []string) error {
