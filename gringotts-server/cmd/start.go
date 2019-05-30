@@ -15,7 +15,9 @@
 package cmd
 
 import (
-	"fmt"
+	"log"
+
+	"github.com/pkg/errors"
 
 	"github.com/jinlingan/gringotts/gringotts-server/config"
 	"github.com/jinlingan/gringotts/gringotts-server/server"
@@ -30,21 +32,38 @@ func newStartCmd() *cobra.Command {
 		RunE:  start,
 	}
 	startCmd.PersistentFlags().StringP(listenerPortFlagName, "p", config.GetDefaultListenerPort(), "listener port")
-	startCmd.PersistentFlags().StringP(externalAddressFlagName,"a",config.GetDefaultExternalAddress(),"external address")
+	startCmd.PersistentFlags().StringP(
+		externalAddressFlagName,
+		"a", config.GetDefaultExternalAddress(), "external address")
 	return startCmd
 }
 
 const (
-	listenerPortFlagName = "port"
+	listenerPortFlagName    = "port"
 	externalAddressFlagName = "address"
-	serverID             = "99"
 )
 
 func start(cmd *cobra.Command, args []string) error {
-	address := ":7777"
-	serverInst, err := server.NewServer(address, serverID)
+	cfg := config.NewServerConfig()
+	flags := cmd.Flags()
+
+	// 根据命令行参数设置工作目录
+	p, err := flags.GetString(listenerPortFlagName)
 	if err != nil {
-		return fmt.Errorf("can not create new server in port %s : %s", address, err)
+		log.Fatal(errors.Wrapf(err, "get flag value of %s fail", listenerPortFlagName))
+	}
+
+	cfg.SetListenerPort(p)
+
+	a, err := flags.GetString(externalAddressFlagName)
+	if err != nil {
+		log.Fatal(errors.Wrapf(err, "get flag value of %s fail", externalAddressFlagName))
+	}
+	cfg.SetExternalAddress(a)
+	serverInst, err := server.NewServer(cfg)
+
+	if err != nil {
+		return errors.Wrap(err, "can not create new server in port")
 	}
 	return serverInst.Serve()
 

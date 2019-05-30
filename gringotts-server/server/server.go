@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/jinlingan/gringotts/gringotts-server/config"
 	"github.com/jinlingan/gringotts/message"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -18,17 +18,16 @@ import (
 
 // GringottsServer 服务器
 type GringottsServer struct {
-	listenAddress string
-	grpcServer    *grpc.Server
-	serverID      string
+	grpcServer *grpc.Server
+	config     *config.ServerConfig
 }
 
 //NewServer 新建 Server 对象
-func NewServer(address string, serverID string) (*GringottsServer, error) {
+func NewServer(cfg *config.ServerConfig) (*GringottsServer, error) {
 
 	server := &GringottsServer{
-		listenAddress: address,
-		grpcServer:    grpc.NewServer(),
+		grpcServer: grpc.NewServer(),
+		config:     cfg,
 	}
 	message.RegisterGringottsServer(server.grpcServer, server)
 	return server, nil
@@ -37,9 +36,9 @@ func NewServer(address string, serverID string) (*GringottsServer, error) {
 
 //Serve 开始提供服务
 func (s *GringottsServer) Serve() error {
-	lis, err := net.Listen("tcp", s.listenAddress)
+	lis, err := net.Listen("tcp", s.config.GetListenerPort())
 	if err != nil {
-		return fmt.Errorf("can not listen in port %s", s.listenAddress)
+		return errors.Errorf("can not listen in port 0.0.0.0%s", s.config.GetListenerPort())
 	}
 	return s.grpcServer.Serve(lis)
 }
@@ -95,7 +94,7 @@ func (s *GringottsServer) Register(
 
 func (s *GringottsServer) newHeartBeatResponse() *message.HeartBeatResponse {
 	resp := &message.HeartBeatResponse{
-		ServerId:      s.serverID,
+		ServerId:      s.config.GetExternalAddress(),
 		ConfigVersion: int64(time.Now().Minute()),
 		MonitorInfo:   getAllTaskByAgentID(),
 	}
