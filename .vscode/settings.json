@@ -3,6 +3,7 @@
     "cSpell.words": [
         "Gringotts",
         "RPCs",
+        "Wrapf",
         "grpc",
         "gzipped",
         "jinlin",
@@ -10,5 +11,13 @@
         "protobuf",
         "protoc"
     ],
-    "cSpell.enabled": true
+    "cSpell.enabled": true,
+    "cSpell.ignorePaths": [
+        "**/package-lock.json",
+        "**/node_modules/**",
+        "**/vscode-extension/**",
+        "**/.git/objects/**",
+        ".vscode",
+        "vendor"
+    ]
 }

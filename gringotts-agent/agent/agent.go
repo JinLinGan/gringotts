@@ -2,9 +2,10 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/jinlingan/gringotts/gringotts-agent/model"
 
@@ -42,13 +43,10 @@ func (a *Agent) Start() error {
 
 		// 启动注册流程
 		if err := a.register(); err != nil {
-			return fmt.Errorf("register agent to server %s error: %s", a.cfg.GetServerAddress(), err)
+			return errors.Wrapf(err, "register agent to server %s fail", a.cfg.GetServerAddress())
 		}
 	}
 
-	// if err := downloadFile(client, "main", "aaaa", a.cfg.GetExecuterPath()); err != nil {
-	// 	log.Printf("can not download file from  server %s ,err is %s", a.cfg.GetServerAddress(), err)
-	// }
 	//开始发送心跳
 	go a.sendHeartBeat()
 	<-stop
@@ -63,10 +61,6 @@ func (a *Agent) register() error {
 	})
 	return err
 }
-
-// func (a *Agent) downloadFile(client *communication.Client, filename, sha1, destPath string) error {
-// 	return client.DownloadFile(filename, sha1, destPath)
-// }
 
 func (a *Agent) sendHeartBeat() {
 

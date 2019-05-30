@@ -13,10 +13,11 @@ import (
 
 func newStartCmd() *cobra.Command {
 	startCmd := &cobra.Command{
-		Use:   "start",
-		Short: "start agent",
+		Use:          "start",
+		Short:        "start agent",
+		SilenceUsage: true,
 		// Long: `start agent`,
-		RunE: praseFlagsAndStartAgent,
+		RunE: parseFlagsAndStartAgent,
 	}
 	startCmd.PersistentFlags().StringP("workpath", "w", "",
 		"work path used to save all program files (default \""+config.GetDefaultWorkPath()+"\")")
@@ -30,7 +31,7 @@ const (
 	serverAddressFlagName = "server"
 )
 
-func praseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
+func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 
 	flags := cmd.Flags()
 

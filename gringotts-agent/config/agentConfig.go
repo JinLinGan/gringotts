@@ -64,7 +64,7 @@ func NewConfig(workPath string) (*AgentConfig, error) {
 
 	agentInfo, err := c.getAgentIDFormWorkdir()
 	if err != nil {
-		log.Printf("read agent info faild so get state unregistered")
+		log.Printf("read agent info failed so set state unregistered")
 		c.isRegistered = false
 		c.agentInfo = nil
 	} else {
@@ -123,7 +123,7 @@ func (c *AgentConfig) getAgentIDFormWorkdir() (*AgentRunningInfo, error) {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("agent info can not find: %v", err)
 		}
-		return nil, fmt.Errorf("read agent info faild: %s", err)
+		return nil, fmt.Errorf("read agent info failed: %s", err)
 	}
 	if err := json.Unmarshal(b, agentInfo); err != nil {
 		return nil, fmt.Errorf("decode agent info file %s fail: %s", path, err)
@@ -134,8 +134,8 @@ func (c *AgentConfig) getAgentIDFormWorkdir() (*AgentRunningInfo, error) {
 func (c *AgentConfig) getAgentRunningInfoFilePath() string {
 	c.RLock()
 	defer c.RUnlock()
-	runningInfoPaht := c.GetWorkPath() + string(os.PathSeparator) + "runinfo"
-	return runningInfoPaht + string(os.PathSeparator) + "agent.info"
+	runningInfoPath := c.GetWorkPath() + string(os.PathSeparator) + "runinfo"
+	return runningInfoPath + string(os.PathSeparator) + "agent.info"
 }
 
 // GetWorkPath 获取工作目录名称
