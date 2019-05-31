@@ -15,12 +15,11 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/pkg/errors"
 
 	"github.com/jinlingan/gringotts/gringotts-server/config"
 	"github.com/jinlingan/gringotts/gringotts-server/server"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +46,7 @@ func start(cmd *cobra.Command, args []string) error {
 	cfg := config.NewServerConfig()
 	flags := cmd.Flags()
 
-	// 根据命令行参数设置工作目录
+	// 根据命令行参数设置监听端口
 	p, err := flags.GetString(listenerPortFlagName)
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "get flag value of %s fail", listenerPortFlagName))

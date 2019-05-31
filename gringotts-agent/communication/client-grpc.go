@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/jinlingan/gringotts/gringotts-agent/model"
 
@@ -84,11 +87,11 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 
 	tf, err := ioutil.TempFile(tempPath, "")
 	if err != nil {
-		return fmt.Errorf("can not create temp file in %s: %s", tempPath, err)
+		return errors.Wrapf(err, "can not create temp file in %s", tempPath)
 	}
 	err = tf.Chmod(0755)
 	if err != nil {
-		return fmt.Errorf("can not change mod of temp file %s : %s", tf.Name(), err)
+		return errors.Wrapf(err, "can not change mod of temp file %s", tf.Name())
 	}
 
 	for {
@@ -110,7 +113,7 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 	err = os.Rename(tf.Name(), destPath+string(os.PathSeparator)+filename)
 
 	if err != nil {
-		return fmt.Errorf("mv file error : %q", err)
+		return errors.Wrapf(err, "mv file error")
 
 	}
 

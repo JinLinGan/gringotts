@@ -3,13 +3,15 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	"github.com/pkg/errors"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -17,7 +19,7 @@ const (
 	PermissionMode       = 0750
 	defaultServerAddress = "gringotts-server:7777"
 	defaultWinWorkPath   = `c:\gringotts-agent`
-	defaultLinuxWorkPath = "/usr/local/gringotts"
+	defaultLinuxWorkPath = "/var/gringotts"
 )
 
 // AgentConfig Agent 的配置
@@ -59,12 +61,12 @@ func NewConfig(workPath string) (*AgentConfig, error) {
 		downloadTempDirName: "tmp",
 	}
 
-	if workPath != "" {
+	if workPath != GetDefaultServerAddress() {
 		if err := c.setWorkPath(workPath); err != nil {
-			return nil, fmt.Errorf("can not set work path to %s: %s", workPath, err)
+			return nil, errors.Wrapf(err, "can not set work path to %s", workPath)
 		}
 	}
-
+	//TODO:移动到启动时判断
 	agentInfo, err := c.getAgentIDFormWorkdir()
 	if err != nil {
 		log.Printf("read agent info failed so set state unregistered")
@@ -85,7 +87,7 @@ func (c *AgentConfig) setWorkPath(path string) error {
 		log.Printf("dir %s not exist, to create it", path)
 		// 新建目录
 		if err := os.MkdirAll(path, PermissionMode); err != nil {
-			return fmt.Errorf("can not make dir %s: %s", path, err)
+			return errors.Wrapf(err, "can not make dir %s", path)
 		}
 	}
 
@@ -98,7 +100,7 @@ func (c *AgentConfig) setWorkPath(path string) error {
 		log.Printf("dir %s not exist, to create it", c.GetExecuterPath())
 		// 新建目录
 		if err := os.MkdirAll(c.GetExecuterPath(), PermissionMode); err != nil {
-			return fmt.Errorf("can not make dir %s: %s", c.GetExecuterPath(), err)
+			return errors.Wrapf(err, "can not make dir %s", c.GetExecuterPath())
 		}
 	}
 	//create downloadTempDir
@@ -106,7 +108,7 @@ func (c *AgentConfig) setWorkPath(path string) error {
 		log.Printf("dir %s not exist, to create it", c.GetDownloadTempPath())
 		// 新建目录
 		if err := os.MkdirAll(c.GetDownloadTempPath(), PermissionMode); err != nil {
-			return fmt.Errorf("can not make dir %s: %s", c.GetDownloadTempPath(), err)
+			return errors.Wrapf(err, "can not make dir %s", c.GetDownloadTempPath())
 		}
 	}
 
@@ -124,12 +126,12 @@ func (c *AgentConfig) getAgentIDFormWorkdir() (*AgentRunningInfo, error) {
 	if err != nil {
 		// 如果文件不存在
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("agent info can not find: %v", err)
+			return nil, errors.Wrapf(err, "agent info can not find")
 		}
-		return nil, fmt.Errorf("read agent info failed: %s", err)
+		return nil, errors.Wrapf(err, "read agent info failed")
 	}
 	if err := json.Unmarshal(b, agentInfo); err != nil {
-		return nil, fmt.Errorf("decode agent info file %s fail: %s", path, err)
+		return nil, errors.Wrapf(err, "decode agent info file %s fail", path)
 	}
 	return agentInfo, nil
 }
@@ -200,10 +202,10 @@ func (c *AgentConfig) SetConfigVersion(v int64) error {
 
 	b, err := json.Marshal(c.agentInfo)
 	if err != nil {
-		return fmt.Errorf("encode agent config %+v fail: %s", c.agentInfo, err)
+		return errors.Wrapf(err, "encode agent config %+v fail", c.agentInfo)
 	}
 	if err := ioutil.WriteFile(c.getAgentRunningInfoFilePath(), b, PermissionMode); err != nil {
-		return fmt.Errorf("write agent config file %s fail: %s", c.getAgentRunningInfoFilePath(), err)
+		return errors.Wrapf(err, "write agent config file %s fail", c.getAgentRunningInfoFilePath())
 	}
 	return nil
 }

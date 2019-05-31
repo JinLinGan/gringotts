@@ -1,11 +1,13 @@
 package cmd
 
 import (
-	"log"
+	"os"
+
+	"github.com/pkg/errors"
 
 	"github.com/jinlingan/gringotts/gringotts-agent/agent"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
-
+	"github.com/jinlingan/gringotts/gringotts-agent/log"
 	"github.com/spf13/cobra"
 )
 
@@ -38,13 +40,18 @@ func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 	// 根据命令行参数设置工作目录
 	w, err := flags.GetString(workPathFlagName)
 	if err != nil {
-		log.Fatalf("get flag value of %s error: %s", workPathFlagName, err)
+		return errors.Wrapf(err, "get flag value of %s error: %s", workPathFlagName)
 	}
 
 	cfg, err := config.NewConfig(w)
 	if err != nil {
-		log.Printf("create agent with err: %s", err)
+		return errors.Wrapf(err, "create agent config fail")
 	}
+
+	//初始化 logger
+	log := log.NewAgentLogger(cfg.GetWorkPath() +
+		string(os.PathSeparator) + "logs" +
+		string(os.PathSeparator) + "gringotts-agent.log")
 
 	s, err := flags.GetString(serverAddressFlagName)
 	if err != nil {
@@ -52,12 +59,15 @@ func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// 根据命令行参数设置服务端地址
-	if s != "" {
-		log.Printf("set server address to %s", s)
+	if s != config.GetDefaultServerAddress() {
+		log.Infof("set server address to %s", s)
 		cfg.SetServerAddress(s)
 	}
 
-	a := agent.NewAgent(cfg)
+	//TODO:继续迁移日志到 logrus
+	//TOOD:迁移 fmt.Errorf 到 errors
+	//TODO:不使用 fmt 包
+	a := agent.NewAgent(cfg, log)
 
 	return a.Start()
 }

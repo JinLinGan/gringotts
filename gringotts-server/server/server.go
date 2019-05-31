@@ -3,10 +3,11 @@ package server
 import (
 	"context"
 	"io"
-	"log"
 	"net"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 
