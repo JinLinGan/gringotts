@@ -9,26 +9,23 @@ import (
 	"os"
 	"time"
 
-	"github.com/pkg/errors"
-
-	log "github.com/sirupsen/logrus"
-
-	"github.com/jinlingan/gringotts/gringotts-agent/model"
-
-	"google.golang.org/grpc"
-
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
+	"github.com/jinlingan/gringotts/gringotts-agent/log"
+	"github.com/jinlingan/gringotts/gringotts-agent/model"
 	"github.com/jinlingan/gringotts/message"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 // Client 用于表示服务，负责与服务器通信
 type Client struct {
 	conn   *grpc.ClientConn
 	client message.GringottsClient
+	logger log.Logger
 }
 
 // NewClient 使用单例模式新建 Client
-func NewClient(cfg *config.AgentConfig) (*Client, error) {
+func NewClient(cfg *config.AgentConfig, logger log.Logger) (*Client, error) {
 
 	conn, err := grpc.Dial(cfg.GetServerAddress(), grpc.WithInsecure())
 	if err != nil {
@@ -38,6 +35,7 @@ func NewClient(cfg *config.AgentConfig) (*Client, error) {
 	instance := &Client{
 		conn:   conn,
 		client: message.NewGringottsClient(conn),
+		logger: logger,
 	}
 
 	return instance, nil
@@ -46,11 +44,11 @@ func NewClient(cfg *config.AgentConfig) (*Client, error) {
 //Close 关闭连接
 func (c *Client) Close() {
 	if err := c.conn.Close(); err != nil {
-		log.Printf("close server conn error: %v", err)
+		c.logger.Infof("close server conn error: %v", err)
 	}
 }
 
-func newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
+func (c *Client) newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
 	req := message.HeartBeatRequest{
 		AgentId: agentID,
 		Time:    time.Now().UnixNano(),
@@ -58,7 +56,7 @@ func newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
-		log.Printf("get hostname with err: %s", err)
+		c.logger.Infof("get hostname with err: %s", err)
 	}
 	req.HostName = hostname
 	return &req
@@ -66,7 +64,7 @@ func newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
 
 //HeartBeat 发送心跳
 func (c *Client) HeartBeat(ctx context.Context, agentID string) (*message.HeartBeatResponse, error) {
-	hb := newHeartBeatRequest(agentID)
+	hb := c.newHeartBeatRequest(agentID)
 	fmt.Println(c.client)
 	return c.client.HeartBeat(ctx, hb)
 }
@@ -97,15 +95,15 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 	for {
 		fc, err := fcClient.Recv()
 		if err == io.EOF {
-			log.Printf("reach EOF : %s ,%v", err, fc)
+			c.logger.Infof("reach EOF : %s ,%v", err, fc)
 			break
 		}
 		if err != nil {
-			log.Printf("get unknown error from server: %s", err)
+			c.logger.Infof("get unknown error from server: %s", err)
 			return err
 		}
 		if _, err := tf.Write(fc.GetData()); err != nil {
-			log.Printf("fail to write file %s : %s", tf.Name(), err)
+			c.logger.Infof("fail to write file %s : %s", tf.Name(), err)
 			break
 		}
 	}
@@ -118,10 +116,10 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 	}
 
 	if err := tf.Close(); err != nil {
-		log.Printf("can not close tmp file %s: %v", tf.Name(), err)
+		c.logger.Infof("can not close tmp file %s: %v", tf.Name(), err)
 	}
 	if err := os.Remove(tf.Name()); err != nil {
-		log.Printf("can not remove tmp file %s: %v", tf.Name(), err)
+		c.logger.Infof("can not remove tmp file %s: %v", tf.Name(), err)
 	}
 
 	return nil

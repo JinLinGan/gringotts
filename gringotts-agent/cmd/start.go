@@ -40,7 +40,7 @@ func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 	// 根据命令行参数设置工作目录
 	w, err := flags.GetString(workPathFlagName)
 	if err != nil {
-		return errors.Wrapf(err, "get flag value of %s error: %s", workPathFlagName)
+		return errors.Wrapf(err, "get flag value of %s", workPathFlagName)
 	}
 
 	cfg, err := config.NewConfig(w)
@@ -49,25 +49,28 @@ func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	//初始化 logger
-	log := log.NewAgentLogger(cfg.GetWorkPath() +
+	logger := log.NewAgentLogger(cfg.GetWorkPath() +
 		string(os.PathSeparator) + "logs" +
 		string(os.PathSeparator) + "gringotts-agent.log")
 
+	// 使用新的 logger 替换
+	cfg.SetLogger(logger)
+
 	s, err := flags.GetString(serverAddressFlagName)
 	if err != nil {
-		log.Fatalf("get flag value of %s error: %s", serverAddressFlagName, err)
+		logger.Fatal(errors.Wrapf(err, "get flag value of %s", serverAddressFlagName))
 	}
 
 	// 根据命令行参数设置服务端地址
 	if s != config.GetDefaultServerAddress() {
-		log.Infof("set server address to %s", s)
+		logger.Infof("set server address to %s", s)
 		cfg.SetServerAddress(s)
 	}
 
 	//TODO:继续迁移日志到 logrus
-	//TOOD:迁移 fmt.Errorf 到 errors
+	//TODO:迁移 fmt.Errorf 到 errors
 	//TODO:不使用 fmt 包
-	a := agent.NewAgent(cfg, log)
+	a := agent.NewAgent(cfg, logger)
 
 	return a.Start()
 }

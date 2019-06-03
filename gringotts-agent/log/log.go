@@ -41,3 +41,16 @@ type Logger interface {
 	Error(args ...interface{})
 	Fatal(args ...interface{})
 }
+
+// NewStdoutLogger 新建 AgentLogger
+func NewStdoutLogger() Logger {
+	return &logrus.Logger{
+		Out: os.Stdout,
+		Formatter: &logrus.TextFormatter{
+			ForceColors: true,
+		},
+		Hooks:        make(logrus.LevelHooks),
+		Level:        logrus.DebugLevel,
+		ReportCaller: true,
+	}
+}

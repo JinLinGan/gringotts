@@ -6,6 +6,7 @@ import (
 
 // ServerConfig 服务端配置
 type ServerConfig struct {
+	//TODO:加锁
 	listenerPort    string
 	externalAddress string
 }
