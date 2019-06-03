@@ -8,8 +8,8 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// NewAgentLogger 新建 AgentLogger
-func NewAgentLogger(filepath string) Logger {
+// NewStdAndFileLogger 新建 AgentLogger
+func NewStdAndFileLogger(filepath string) Logger {
 	return &logrus.Logger{
 		Out: io.MultiWriter(os.Stdout, &lumberjack.Logger{
 			Filename:   filepath,
@@ -19,7 +19,7 @@ func NewAgentLogger(filepath string) Logger {
 			MaxAge:     365, // Days
 		}),
 		Formatter: &logrus.TextFormatter{
-			ForceColors: true,
+			DisableColors: true,
 		},
 		Hooks:        make(logrus.LevelHooks),
 		Level:        logrus.DebugLevel,
@@ -47,7 +47,7 @@ func NewStdoutLogger() Logger {
 	return &logrus.Logger{
 		Out: os.Stdout,
 		Formatter: &logrus.TextFormatter{
-			ForceColors: true,
+			DisableColors: true,
 		},
 		Hooks:        make(logrus.LevelHooks),
 		Level:        logrus.DebugLevel,

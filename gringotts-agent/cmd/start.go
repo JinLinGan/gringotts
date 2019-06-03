@@ -5,9 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/jinlingan/gringotts/common/log"
 	"github.com/jinlingan/gringotts/gringotts-agent/agent"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
-	"github.com/jinlingan/gringotts/gringotts-agent/log"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +49,7 @@ func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	//初始化 logger
-	logger := log.NewAgentLogger(cfg.GetWorkPath() +
+	logger := log.NewStdAndFileLogger(cfg.GetWorkPath() +
 		string(os.PathSeparator) + "logs" +
 		string(os.PathSeparator) + "gringotts-agent.log")
 
@@ -67,9 +67,6 @@ func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 		cfg.SetServerAddress(s)
 	}
 
-	//TODO:继续迁移日志到 logrus
-	//TODO:迁移 fmt.Errorf 到 errors
-	//TODO:不使用 fmt 包
 	a := agent.NewAgent(cfg, logger)
 
 	return a.Start()

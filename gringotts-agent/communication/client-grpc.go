@@ -3,16 +3,15 @@ package communication
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"time"
 
+	"github.com/jinlingan/gringotts/common/log"
+	"github.com/jinlingan/gringotts/common/message"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
-	"github.com/jinlingan/gringotts/gringotts-agent/log"
 	"github.com/jinlingan/gringotts/gringotts-agent/model"
-	"github.com/jinlingan/gringotts/message"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -65,7 +64,6 @@ func (c *Client) newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
 //HeartBeat 发送心跳
 func (c *Client) HeartBeat(ctx context.Context, agentID string) (*message.HeartBeatResponse, error) {
 	hb := c.newHeartBeatRequest(agentID)
-	fmt.Println(c.client)
 	return c.client.HeartBeat(ctx, hb)
 }
 
@@ -84,6 +82,16 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 	}
 
 	tf, err := ioutil.TempFile(tempPath, "")
+	defer func() {
+		if err := tf.Close(); err != nil {
+			c.logger.Infof("can not close tmp file %s: %v", tf.Name(), err)
+		}
+	}()
+	defer func() {
+		if err := os.Remove(tf.Name()); err != nil {
+			c.logger.Infof("can not remove tmp file %s: %v", tf.Name(), err)
+		}
+	}()
 	if err != nil {
 		return errors.Wrapf(err, "can not create temp file in %s", tempPath)
 	}
@@ -95,16 +103,13 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 	for {
 		fc, err := fcClient.Recv()
 		if err == io.EOF {
-			c.logger.Infof("reach EOF : %s ,%v", err, fc)
 			break
 		}
 		if err != nil {
-			c.logger.Infof("get unknown error from server: %s", err)
-			return err
+			return errors.Wrap(err, "get unknown error from server")
 		}
 		if _, err := tf.Write(fc.GetData()); err != nil {
-			c.logger.Infof("fail to write file %s : %s", tf.Name(), err)
-			break
+			return errors.Wrapf(err, "write to temp file %s fail", tf.Name())
 		}
 	}
 
@@ -113,13 +118,6 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 	if err != nil {
 		return errors.Wrapf(err, "mv file error")
 
-	}
-
-	if err := tf.Close(); err != nil {
-		c.logger.Infof("can not close tmp file %s: %v", tf.Name(), err)
-	}
-	if err := os.Remove(tf.Name()); err != nil {
-		c.logger.Infof("can not remove tmp file %s: %v", tf.Name(), err)
 	}
 
 	return nil

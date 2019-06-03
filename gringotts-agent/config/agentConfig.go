@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/jinlingan/gringotts/gringotts-agent/log"
+	"github.com/jinlingan/gringotts/common/log"
 	"github.com/pkg/errors"
 )
 

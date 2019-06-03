@@ -11,9 +11,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/jinlingan/gringotts/common/log"
 	"github.com/jinlingan/gringotts/gringotts-agent/communication"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
-	"github.com/jinlingan/gringotts/gringotts-agent/log"
 	"github.com/jinlingan/gringotts/gringotts-agent/model"
 )
 
@@ -68,7 +68,8 @@ func (a *Agent) Start() error {
 		// 启动注册流程
 		//TODO:重试 N 次
 		if err := a.register(); err != nil {
-			return errors.Wrapf(err, "register agent to server %s fail", a.cfg.GetServerAddress())
+			a.logger.Error(errors.Wrapf(err, "register agent to server %s fail", a.cfg.GetServerAddress()))
+			return errors.New("start agent fail")
 		}
 	}
 

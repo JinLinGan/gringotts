@@ -17,9 +17,9 @@ package cmd
 import (
 	"github.com/pkg/errors"
 
+	"github.com/jinlingan/gringotts/common/log"
 	"github.com/jinlingan/gringotts/gringotts-server/config"
 	"github.com/jinlingan/gringotts/gringotts-server/server"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -45,21 +45,22 @@ const (
 func start(cmd *cobra.Command, args []string) error {
 	cfg := config.NewServerConfig()
 	flags := cmd.Flags()
-
+	//TODO 改变日志路径
+	logger := log.NewStdAndFileLogger("/tmp/test.log")
 	// 根据命令行参数设置监听端口
 	p, err := flags.GetString(listenerPortFlagName)
 	if err != nil {
-		log.Fatal(errors.Wrapf(err, "get flag value of %s fail", listenerPortFlagName))
+		logger.Fatal(errors.Wrapf(err, "get flag value of %s fail", listenerPortFlagName))
 	}
 
 	cfg.SetListenerPort(p)
 
 	a, err := flags.GetString(externalAddressFlagName)
 	if err != nil {
-		log.Fatal(errors.Wrapf(err, "get flag value of %s fail", externalAddressFlagName))
+		logger.Fatal(errors.Wrapf(err, "get flag value of %s fail", externalAddressFlagName))
 	}
 	cfg.SetExternalAddress(a)
-	serverInst, err := server.NewServer(cfg)
+	serverInst, err := server.NewServer(cfg, logger)
 
 	if err != nil {
 		return errors.Wrap(err, "can not create new server in port")

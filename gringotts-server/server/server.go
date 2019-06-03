@@ -7,12 +7,10 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/pkg/errors"
-
+	"github.com/jinlingan/gringotts/common/log"
+	"github.com/jinlingan/gringotts/common/message"
 	"github.com/jinlingan/gringotts/gringotts-server/config"
-	"github.com/jinlingan/gringotts/message"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
@@ -21,14 +19,16 @@ import (
 type GringottsServer struct {
 	grpcServer *grpc.Server
 	config     *config.ServerConfig
+	logger     log.Logger
 }
 
 //NewServer 新建 Server 对象
-func NewServer(cfg *config.ServerConfig) (*GringottsServer, error) {
+func NewServer(cfg *config.ServerConfig, logger log.Logger) (*GringottsServer, error) {
 
 	server := &GringottsServer{
 		grpcServer: grpc.NewServer(),
 		config:     cfg,
+		logger:     logger,
 	}
 	message.RegisterGringottsServer(server.grpcServer, server)
 	return server, nil
@@ -47,7 +47,7 @@ func (s *GringottsServer) Serve() error {
 //HeartBeat 接收心跳
 func (s *GringottsServer) HeartBeat(ctx context.Context,
 	req *message.HeartBeatRequest) (*message.HeartBeatResponse, error) {
-	log.Printf("get HeartBeat message from agent(id=%s,hostname=%s)", req.GetAgentId(), req.GetHostName())
+	s.logger.Debugf("get HeartBeat message from agent(id=%s,hostname=%s)", req.GetAgentId(), req.GetHostName())
 	return s.newHeartBeatResponse(), nil
 }
 
