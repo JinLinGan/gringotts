@@ -39,7 +39,7 @@ func NewAgent(cfg *config.AgentConfig, logger log.Logger) *Agent {
 	//新建客户端
 	client, err := communication.NewClient(cfg, logger)
 	if err != nil {
-		logger.Warn(errors.Wrapf(err, "can not create communicate agent with server %s", cfg.GetServerAddress()))
+		logger.Warne(err, "can not create communicate agent with server %s", cfg.GetServerAddress())
 	}
 	return &Agent{
 		cfg:       cfg,
@@ -68,7 +68,7 @@ func (a *Agent) Start() error {
 		// 启动注册流程
 		//TODO:重试 N 次
 		if err := a.register(); err != nil {
-			a.logger.Error(errors.Wrapf(err, "register agent to server %s fail", a.cfg.GetServerAddress()))
+			a.logger.Errore(err, "register agent to server %s fail", a.cfg.GetServerAddress())
 			return errors.New("start agent fail")
 		}
 	}

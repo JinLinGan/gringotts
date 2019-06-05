@@ -31,35 +31,58 @@ func newStartCmd() *cobra.Command {
 		RunE:  start,
 	}
 	startCmd.PersistentFlags().StringP(listenerPortFlagName, "p", config.GetDefaultListenerPort(), "listener port")
+	// 外部地址，用于发送给客户端
 	startCmd.PersistentFlags().StringP(
 		externalAddressFlagName,
 		"a", config.GetDefaultExternalAddress(), "external address")
+	startCmd.PersistentFlags().StringP(workDirFlagName, "w", config.GetDefaultWorkPath(), "work path")
 	return startCmd
 }
 
 const (
 	listenerPortFlagName    = "port"
 	externalAddressFlagName = "address"
+	workDirFlagName         = "workpath"
 )
 
 func start(cmd *cobra.Command, args []string) error {
 	cfg := config.NewServerConfig()
 	flags := cmd.Flags()
-	//TODO 改变日志路径
-	logger := log.NewStdAndFileLogger("/tmp/test.log")
+
+	// 设置工作路径
+	w, err := flags.GetString(workDirFlagName)
+	if err != nil {
+		stdLogger := log.NewStdoutLogger()
+		stdLogger.Fatal(err, "get flag value of %s fail", workDirFlagName)
+	}
+	if w != config.GetDefaultWorkPath() {
+		cfg.SetWorkPath(w)
+	}
+
+	//初始化 logger
+	stdLogger := log.NewStdoutLogger()
+	path := cfg.GetLogFilePath()
+	stdLogger.Infof("set log file path to %s", path)
+	logger := log.NewStdAndFileLogger(path)
+
 	// 根据命令行参数设置监听端口
 	p, err := flags.GetString(listenerPortFlagName)
 	if err != nil {
-		logger.Fatal(errors.Wrapf(err, "get flag value of %s fail", listenerPortFlagName))
+		logger.Fatal(err, "get flag value of %s fail", listenerPortFlagName)
+	}
+	if p != config.GetDefaultListenerPort() {
+		cfg.SetListenerPort(p)
 	}
 
-	cfg.SetListenerPort(p)
-
+	// 设置外部地址用于外部访问，可用于下发外网 IP
 	a, err := flags.GetString(externalAddressFlagName)
 	if err != nil {
-		logger.Fatal(errors.Wrapf(err, "get flag value of %s fail", externalAddressFlagName))
+		logger.Fatal(err, "get flag value of %s fail", externalAddressFlagName)
 	}
-	cfg.SetExternalAddress(a)
+	if a != config.GetDefaultExternalAddress() {
+		cfg.SetExternalAddress(a)
+	}
+
 	serverInst, err := server.NewServer(cfg, logger)
 
 	if err != nil {

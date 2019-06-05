@@ -14,8 +14,8 @@ const (
 	// PermissionMode 代表文件的默认权限
 	PermissionMode       = 0750
 	defaultServerAddress = "gringotts-server:7777"
-	defaultWinWorkPath   = `c:\gringotts-agent`
-	defaultLinuxWorkPath = "/var/gringotts"
+	defaultWinWorkPath   = `c:\gringotts\gringotts-agent`
+	defaultLinuxWorkPath = "/var/gringotts/gringotts-agent"
 )
 
 // AgentConfig Agent 的配置

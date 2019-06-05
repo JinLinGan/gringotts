@@ -49,16 +49,18 @@ func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	//初始化 logger
-	logger := log.NewStdAndFileLogger(cfg.GetWorkPath() +
-		string(os.PathSeparator) + "logs" +
-		string(os.PathSeparator) + "gringotts-agent.log")
+	stdLogger := log.NewStdoutLogger()
+	p := cfg.GetWorkPath() + string(os.PathSeparator) + "logs" +
+		string(os.PathSeparator) + "gringotts-agent.log"
+	stdLogger.Infof("set log file path to %s", p)
+	logger := log.NewStdAndFileLogger(p)
 
 	// 使用新的 logger 替换
 	cfg.SetLogger(logger)
 
 	s, err := flags.GetString(serverAddressFlagName)
 	if err != nil {
-		logger.Fatal(errors.Wrapf(err, "get flag value of %s", serverAddressFlagName))
+		logger.Fatal(err, "get flag value of %s", serverAddressFlagName)
 	}
 
 	// 根据命令行参数设置服务端地址

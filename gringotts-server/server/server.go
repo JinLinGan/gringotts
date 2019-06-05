@@ -37,10 +37,12 @@ func NewServer(cfg *config.ServerConfig, logger log.Logger) (*GringottsServer, e
 
 //Serve 开始提供服务
 func (s *GringottsServer) Serve() error {
-	lis, err := net.Listen("tcp", s.config.GetListenerPort())
+	lsP := s.config.GetListenerPort()
+	lis, err := net.Listen("tcp", lsP)
 	if err != nil {
-		return errors.Errorf("can not listen in port 0.0.0.0%s", s.config.GetListenerPort())
+		return errors.Wrapf(err, "can not listen in port 0.0.0.0%s", lsP)
 	}
+	s.logger.Infof("gringotts server listen in port 0.0.0.0%s", lsP)
 	return s.grServer.Serve(lis)
 }
 
@@ -53,6 +55,7 @@ func (s *GringottsServer) HeartBeat(ctx context.Context,
 
 //DownloadFile 下载文件
 func (s *GringottsServer) DownloadFile(f *message.File, fs message.Gringotts_DownloadFileServer) error {
+	//TODO:改变文件路径
 	rf, err := os.Open("/Users/jinlin/code/golang/src/github.com/jinlingan/gringotts/testfile/" + f.GetFileName())
 
 	if err != nil {
