@@ -17,20 +17,20 @@ import (
 
 // GringottsServer 服务器
 type GringottsServer struct {
-	grpcServer *grpc.Server
-	config     *config.ServerConfig
-	logger     log.Logger
+	grServer *grpc.Server
+	config   *config.ServerConfig
+	logger   log.Logger
 }
 
 //NewServer 新建 Server 对象
 func NewServer(cfg *config.ServerConfig, logger log.Logger) (*GringottsServer, error) {
 
 	server := &GringottsServer{
-		grpcServer: grpc.NewServer(),
-		config:     cfg,
-		logger:     logger,
+		grServer: grpc.NewServer(),
+		config:   cfg,
+		logger:   logger,
 	}
-	message.RegisterGringottsServer(server.grpcServer, server)
+	message.RegisterGringottsServer(server.grServer, server)
 	return server, nil
 
 }
@@ -41,7 +41,7 @@ func (s *GringottsServer) Serve() error {
 	if err != nil {
 		return errors.Errorf("can not listen in port 0.0.0.0%s", s.config.GetListenerPort())
 	}
-	return s.grpcServer.Serve(lis)
+	return s.grServer.Serve(lis)
 }
 
 //HeartBeat 接收心跳

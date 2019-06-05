@@ -1,4 +1,4 @@
-// Package communication 用于与服务端通信，暂时只支持 GRPC
+// Package communication 用于与服务端通信，暂时只支持 gRPC
 package communication
 
 import (

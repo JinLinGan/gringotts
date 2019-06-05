@@ -53,7 +53,7 @@ func (a *Agent) Start() error {
 
 	stop := make(chan int, 1)
 	//TODO:移动到启动时判断
-	agentInfo, err := a.getAgentIDFormWorkdir()
+	agentInfo, err := a.getAgentIDFormWorkDir()
 	if err != nil {
 		a.logger.Info("read agent info failed so set state unregistered")
 		a.isRegistered = false
@@ -120,7 +120,7 @@ func (a *Agent) sendHeartBeat() {
 	}
 }
 
-func (a *Agent) getAgentIDFormWorkdir() (*agentRunningInfo, error) {
+func (a *Agent) getAgentIDFormWorkDir() (*agentRunningInfo, error) {
 
 	path := a.cfg.GetAgentRunningInfoFilePath()
 

@@ -23,7 +23,7 @@ type AgentConfig struct {
 	sync.RWMutex
 	workPath            string
 	serverAddress       string
-	executerDirName     string
+	executorDirName     string
 	downloadTempDirName string
 	logger              log.Logger
 }
@@ -46,7 +46,7 @@ func NewConfig(workPath string) (*AgentConfig, error) {
 	c := &AgentConfig{
 		workPath:            GetDefaultWorkPath(),
 		serverAddress:       GetDefaultServerAddress(),
-		executerDirName:     "executer",
+		executorDirName:     "executor",
 		downloadTempDirName: "tmp",
 		logger:              log.NewStdoutLogger(),
 	}
@@ -75,20 +75,22 @@ func (c *AgentConfig) setWorkPath(path string) error {
 	c.workPath = path
 	c.Unlock()
 
-	//create executerDir
-	if _, err := os.Stat(c.GetExecuterPath()); os.IsNotExist(err) {
-		c.logger.Infof("dir %s not exist, to create it", c.GetExecuterPath())
+	execPath := c.GetExecutorPath()
+	//create executorDir
+	if _, err := os.Stat(execPath); os.IsNotExist(err) {
+		c.logger.Infof("dir %s not exist, to create it", execPath)
 		// 新建目录
-		if err := os.MkdirAll(c.GetExecuterPath(), PermissionMode); err != nil {
-			return errors.Wrapf(err, "can not make dir %s", c.GetExecuterPath())
+		if err := os.MkdirAll(execPath, PermissionMode); err != nil {
+			return errors.Wrapf(err, "can not make dir %s", execPath)
 		}
 	}
 	//create downloadTempDir
-	if _, err := os.Stat(c.GetDownloadTempPath()); os.IsNotExist(err) {
-		c.logger.Infof("dir %s not exist, to create it", c.GetDownloadTempPath())
+	downloadTmp := c.GetDownloadTempPath()
+	if _, err := os.Stat(downloadTmp); os.IsNotExist(err) {
+		c.logger.Infof("dir %s not exist, to create it", downloadTmp)
 		// 新建目录
-		if err := os.MkdirAll(c.GetDownloadTempPath(), PermissionMode); err != nil {
-			return errors.Wrapf(err, "can not make dir %s", c.GetDownloadTempPath())
+		if err := os.MkdirAll(downloadTmp, PermissionMode); err != nil {
+			return errors.Wrapf(err, "can not make dir %s", downloadTmp)
 		}
 	}
 
@@ -110,11 +112,11 @@ func (c *AgentConfig) GetWorkPath() string {
 	return c.workPath
 }
 
-// GetExecuterPath 获取执行器目录
-func (c *AgentConfig) GetExecuterPath() string {
+// GetExecutorPath 获取执行器目录
+func (c *AgentConfig) GetExecutorPath() string {
 	c.RLock()
 	defer c.RUnlock()
-	return c.workPath + string(os.PathSeparator) + c.executerDirName
+	return c.workPath + string(os.PathSeparator) + c.executorDirName
 
 }
 
