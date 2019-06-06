@@ -82,6 +82,8 @@ type multiLogger struct {
 	parentLogs []logrus.FieldLogger
 }
 
+//TODO 剥离循环
+//TODO 打印 error 具体堆栈
 //Debugf
 func (l *multiLogger) Debugf(format string, args ...interface{}) {
 	for _, p := range l.parentLogs {

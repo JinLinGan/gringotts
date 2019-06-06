@@ -1,3 +1,5 @@
+DOCKERPATH ?= /private/var/gringotts/docker
+
 build:
 	protoc -I proto proto/message.proto  --go_out=plugins=grpc:message
 
@@ -13,8 +15,15 @@ tidy:
 
 run-agent:
 	go run -race ./gringotts-agent/main.go start
+
 run-server:
 	go run -race ./gringotts-server/main.go start
 
-test:
-	go test -race ./...
+run-mysql:
+	docker run -d --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root -v ${DOCKERPATH}/mysql/data:/var/lib/mysql  mysql:5
+
+stop-mysql:
+	docker stop mysql
+
+rm-mysql:
+	docker rm mysql
