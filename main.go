@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/davecgh/go-spew/spew"
+
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
@@ -53,10 +53,11 @@ type HostInterface struct {
 	HostID        uint
 	HWAddr        string
 	InterfaceName string
+	IPAddress     string
 }
 
 func main() {
-	db, err := gorm.Open("mysql", "gringotts:gringotts@tcp(127.0.0.1)/gringotts")
+	db, err := gorm.Open("mysql", "gringotts:gringotts@tcp(127.0.0.1)/gringotts?parseTime=true")
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -79,20 +80,68 @@ func main() {
 		},
 	}
 	//db.Create(h)
-	db.Model(h).Association("HostInterface").Append(&HostInterface{
-		HWAddr:        "111",
-		InterfaceName: "111",
+	//fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	//db.Model(h).Association("HostInterface").Append(&HostInterface{
+	//	HWAddr:        "111",
+	//	InterfaceName: "111",
+	//})
+	//fmt.Println("1111111")
+	////db.Save(h)
+	//fmt.Println("bbbbbbbbbbbbbbbbbbb")
+	//db.Model(h).Association("HostInterface").Append(&HostInterface{
+	//	HWAddr:        "222",
+	//	InterfaceName: "222",
+	//})
+	//fmt.Println("222222")
+	//db.Model(h).Association("HostInterface").Append(&HostInterface{
+	//	HWAddr:        "333",
+	//	InterfaceName: "3333",
+	//})
+	//fmt.Println("333333")
+	////db.Save(h)
+	////fmt.Println("ccccccccccccc")
+	h.HostInterface = append(h.HostInterface, &HostInterface{
+		HWAddr:        "1111",
+		InterfaceName: "1111",
 	})
-	fmt.Println("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-	spew.Dump(h)
-	db.Save(h)
-	//spew.Dump(h)
+
 	h.HostInterface = append(h.HostInterface, &HostInterface{
 		HWAddr:        "222",
 		InterfaceName: "222",
 	})
-	fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-	spew.Dump(h)
-	db.Save(h)
+	//fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 	//spew.Dump(h)
+	db.Save(h)
+	////spew.Dump(h)
+	//
+	//db.Save(h)
+}
+
+func main2() {
+	db, err := gorm.Open("mysql", "gringotts:gringotts@tcp(127.0.0.1)/gringotts?parseTime=true")
+	if err != nil {
+		panic("failed to connect database")
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Print(err)
+		}
+	}()
+	db = db.Debug()
+	db.SingularTable(true)
+	db.AutoMigrate(&Host{}, &HostInterface{})
+	results := []Host{}
+	db.Preload("HostInterface").Table("host").Joins("left join host_interface on host_interface.host_id = host.id").Where("host_interface.hw_addr = ?", "1111").Find(&results)
+	//if err != nil {
+	//	log.Println(err)
+	//}
+	//for rows.Next() {
+	//	var result Host
+	//	if err := db.ScanRows(rows, &result); err != nil {
+	//		log.Println(err)
+	//	}
+	//	db.Model(&result).Association("host_interface")
+	//	results = append(results, result)
+	//}
+	spew.Dump(results)
 }

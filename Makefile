@@ -1,7 +1,7 @@
 DOCKERPATH ?= /private/var/gringotts/docker
 
 build:
-	protoc -I proto proto/message.proto  --go_out=plugins=grpc:message
+	protoc -I proto proto/message.proto  --go_out=plugins=grpc:common/message
 
 check-all:
 	golangci-lint run --no-config  --enable-all  ./...
