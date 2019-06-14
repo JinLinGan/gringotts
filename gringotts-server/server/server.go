@@ -35,12 +35,12 @@ func NewServer(cfg *config.ServerConfig, logger log.Logger) (*GringottsServer, e
 	//TODO:移动到配置文件中
 	dataSourceName := "gringotts:gringotts@tcp(127.0.0.1)/gringotts?parseTime=true"
 	db, err := gorm.Open("mysql", dataSourceName)
-
+	if err != nil {
+		return nil, errors.Wrap(err, "open database error")
+	}
 	db = db.Debug()
 	db.SingularTable(true)
-	if err != nil {
-		return nil, errors.Wrapf(err, "can not connect to database %s", dataSourceName)
-	}
+
 	server := &GringottsServer{
 		grServer: grpc.NewServer(),
 		config:   cfg,
