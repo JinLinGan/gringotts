@@ -124,20 +124,22 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 }
 
 //Register 注册 agent
-func (c *Client) Register(hostName string, netInfos *model.NetInfos) (*model.RegisterResp, error) {
+func (c *Client) Register(hostName string, nicInfos []*model.NICInfo) (*model.RegisterResp, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	req := &message.RegisterRequest{
 		HostName: hostName,
 	}
-	req.NetInfo = make([]*message.RegisterRequest_NetInfo, len(*netInfos))
+	req.NetInfo = make([]*message.RegisterRequest_NetInfo, len(nicInfos))
 
 	index := 0
-	for _, v := range *netInfos {
+	for _, v := range nicInfos {
 		n := &message.RegisterRequest_NetInfo{
-			IpAddress:  v.IPAddress,
-			MacAddress: v.MacAddress,
+			//TODO:一个网卡多个 IP 地址的情况要如何处理
+			IpAddress:     v.IPAddress,
+			MacAddress:    v.MacAddress,
+			InterfaceName: v.Name,
 		}
 		req.NetInfo[index] = n
 		index++

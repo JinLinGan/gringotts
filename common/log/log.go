@@ -1,19 +1,27 @@
 package log
 
 import (
+	"fmt"
 	"os"
+	"runtime"
+	"strings"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	//包名变化记得修改这里的值
+	logrusPkgName   = "github.com/sirupsen/logrus"
+	myLoggerPkgName = "github.com/jinlingan/gringotts/common/log"
 )
 
 // NewStdAndFileLogger 新建 AgentLogger
 func NewStdAndFileLogger(filepath string) Logger {
 	return &multiLogger{
-		parentLogs: []logrus.FieldLogger{
-			&logrus.Logger{
+		parentLogs: []*logrus.Logger{
+			{
 				Out: &lumberjack.Logger{
 					Filename:   filepath,
 					MaxSize:    100, // MB
@@ -22,15 +30,18 @@ func NewStdAndFileLogger(filepath string) Logger {
 					MaxAge:     365, // Days
 				},
 				Formatter: &logrus.TextFormatter{
-					DisableColors: true,
+					DisableColors:    true,
+					CallerPrettyfier: caller,
 				},
 				Hooks:        make(logrus.LevelHooks),
 				Level:        logrus.DebugLevel,
 				ReportCaller: true,
-			}, &logrus.Logger{
+			},
+			{
 				Out: os.Stdout,
 				Formatter: &logrus.TextFormatter{
-					FullTimestamp: true,
+					FullTimestamp:    true,
+					CallerPrettyfier: caller,
 				},
 				Hooks:        make(logrus.LevelHooks),
 				Level:        logrus.DebugLevel,
@@ -43,11 +54,12 @@ func NewStdAndFileLogger(filepath string) Logger {
 // NewStdoutLogger 新建 AgentLogger
 func NewStdoutLogger() Logger {
 	return &multiLogger{
-		parentLogs: []logrus.FieldLogger{
-			&logrus.Logger{
+		parentLogs: []*logrus.Logger{
+			{
 				Out: os.Stdout,
 				Formatter: &logrus.TextFormatter{
-					FullTimestamp: true,
+					FullTimestamp:    true,
+					CallerPrettyfier: caller,
 				},
 				Hooks:        make(logrus.LevelHooks),
 				Level:        logrus.DebugLevel,
@@ -55,6 +67,43 @@ func NewStdoutLogger() Logger {
 			},
 		},
 	}
+}
+
+// 目前的实现方式会导致取两次调用栈信息（一次在 logrus 中，一次在这里），
+// 如果关闭 logrus 的调用栈会导致 TextFormatter 不调用这个函数
+// TODO:看看能不能只调用一次，可能需要自己实现一个 TextFormatter
+func caller(_ *runtime.Frame) (function string, file string) {
+
+	pcs := make([]uintptr, 10)
+	depth := runtime.Callers(4, pcs)
+	frames := runtime.CallersFrames(pcs[:depth])
+
+	for f, again := frames.Next(); again; f, again = frames.Next() {
+		//pkg := getPackageName(f.Function)
+
+		// If the caller isn't part of this package, we're done
+		pkg := getPackageName(f.Function)
+		if pkg != logrusPkgName && pkg != myLoggerPkgName {
+			file := fmt.Sprintf(" %s:%d", f.File, f.Line)
+			return f.Function, file
+		}
+	}
+
+	return "unknow", "unknow"
+}
+
+func getPackageName(f string) string {
+	for {
+		lastPeriod := strings.LastIndex(f, ".")
+		lastSlash := strings.LastIndex(f, "/")
+		if lastPeriod > lastSlash {
+			f = f[:lastPeriod]
+		} else {
+			break
+		}
+	}
+
+	return f
 }
 
 // Logger 日志接口
@@ -79,112 +128,103 @@ type Logger interface {
 }
 
 type multiLogger struct {
-	parentLogs []logrus.FieldLogger
+	parentLogs []*logrus.Logger
 }
 
-//TODO 剥离循环
-//TODO 打印 error 具体堆栈
+func (l *multiLogger) Log(level logrus.Level, args ...interface{}) {
+	for _, p := range l.parentLogs {
+		p.Log(level, args...)
+	}
+}
+
+func (l *multiLogger) Logf(level logrus.Level, format string, args ...interface{}) {
+	for _, p := range l.parentLogs {
+		p.Logf(level, format, args...)
+	}
+}
+
+func (l *multiLogger) Loge(level logrus.Level, err error, format string, args ...interface{}) {
+
+	var msg strings.Builder
+	msg.WriteString(fmt.Sprintf(format, args...))
+	msg.WriteString(fmt.Sprintf(". Caused by: %v\nError Chain is:\n%+v", err, err))
+
+	for _, p := range l.parentLogs {
+		p.Log(level, msg.String())
+	}
+}
+
 //Debugf
 func (l *multiLogger) Debugf(format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Debugf(format, args...)
-	}
+	l.Logf(logrus.DebugLevel, format, args...)
 }
 
 //Infof
 func (l *multiLogger) Infof(format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Infof(format, args...)
-	}
+	l.Logf(logrus.InfoLevel, format, args...)
 }
 
 //Warnf
 func (l *multiLogger) Warnf(format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Warnf(format, args...)
-	}
+	l.Logf(logrus.WarnLevel, format, args...)
 }
 
 //Errorf
 func (l *multiLogger) Errorf(format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Errorf(format, args...)
-	}
+	l.Logf(logrus.ErrorLevel, format, args...)
 }
 
 //Fatalf
 func (l *multiLogger) Fatalf(format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Fatalf(format, args...)
-	}
+	l.Logf(logrus.FatalLevel, format, args...)
 }
 
 //Debug
 func (l *multiLogger) Debug(args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Debug(args...)
-	}
+	l.Log(logrus.DebugLevel, args...)
 }
 
 //Info
 func (l *multiLogger) Info(args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Info(args...)
-	}
+	l.Log(logrus.InfoLevel, args...)
 }
 
 //Warn
 func (l *multiLogger) Warn(args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Warn(args...)
-	}
+	l.Log(logrus.WarnLevel, args...)
 }
 
 //Error
 func (l *multiLogger) Error(args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Error(args...)
-	}
+	l.Log(logrus.ErrorLevel, args...)
 }
 
 //Fatal
 func (l *multiLogger) Fatal(args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Fatal(args...)
-	}
+	l.Log(logrus.FatalLevel, args...)
 }
 
 //Debuge
 func (l *multiLogger) Debuge(err error, format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Debug(errors.Wrapf(err, format, args...))
-	}
+	l.Loge(logrus.DebugLevel, err, format, args...)
 }
 
 //Infoe
 func (l *multiLogger) Infoe(err error, format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Info(errors.Wrapf(err, format, args...))
-	}
+	l.Loge(logrus.InfoLevel, err, format, args...)
 }
 
 //Warne
 func (l *multiLogger) Warne(err error, format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Warn(errors.Wrapf(err, format, args...))
-	}
+	l.Loge(logrus.WarnLevel, err, format, args...)
 }
 
 //Errore
 func (l *multiLogger) Errore(err error, format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Error(errors.Wrapf(err, format, args...))
-	}
+	l.Loge(logrus.ErrorLevel, err, format, args...)
 }
 
 //Fatale
 func (l *multiLogger) Fatale(err error, format string, args ...interface{}) {
-	for _, p := range l.parentLogs {
-		p.Fatal(errors.Wrapf(err, format, args...))
-	}
+	l.Loge(logrus.FatalLevel, err, format, args...)
 }

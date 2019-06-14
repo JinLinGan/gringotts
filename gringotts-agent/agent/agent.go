@@ -9,12 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jinlingan/gringotts/gringotts-agent/util"
+
 	"github.com/pkg/errors"
 
 	"github.com/jinlingan/gringotts/common/log"
 	"github.com/jinlingan/gringotts/gringotts-agent/communication"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
-	"github.com/jinlingan/gringotts/gringotts-agent/model"
 )
 
 // Agent Gringotts Agent
@@ -82,9 +83,15 @@ func (a *Agent) Start() error {
 // register 注册 agent
 func (a *Agent) register() error {
 	//TODO 写代码
-	_, err := a.apiClient.Register("aaaa", &model.NetInfos{
-		"eth0": {},
-	})
+	nicInfos, err := util.GetNIC()
+	if err != nil {
+		return errors.Wrap(err, "get network info fail")
+	}
+	hostName, err := os.Hostname()
+	if err != nil {
+		return errors.Wrap(err, "get hostname fail.")
+	}
+	_, err = a.apiClient.Register(hostName, nicInfos)
 	return err
 }
 

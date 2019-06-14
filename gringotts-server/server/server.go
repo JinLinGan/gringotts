@@ -5,7 +5,10 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/jinlingan/gringotts/gringotts-server/model"
 
@@ -20,6 +23,7 @@ import (
 
 // GringottsServer 服务器
 type GringottsServer struct {
+	sync.RWMutex
 	grServer *grpc.Server
 	config   *config.ServerConfig
 	logger   log.Logger
@@ -28,8 +32,12 @@ type GringottsServer struct {
 
 //NewServer 新建 Server 对象
 func NewServer(cfg *config.ServerConfig, logger log.Logger) (*GringottsServer, error) {
+	//TODO:移动到配置文件中
 	dataSourceName := "gringotts:gringotts@tcp(127.0.0.1)/gringotts?parseTime=true"
 	db, err := gorm.Open("mysql", dataSourceName)
+
+	db = db.Debug()
+	db.SingularTable(true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "can not connect to database %s", dataSourceName)
 	}
@@ -102,21 +110,90 @@ func (s *GringottsServer) DownloadFile(f *message.File, fs message.Gringotts_Dow
 func (s *GringottsServer) Register(ctx context.Context,
 	req *message.RegisterRequest) (*message.RegisterResponse, error) {
 
-	return nil, errors.Errorf("not implement")
+	//TODO:返回正确的 ConfigVersion
+
+	//hosts,notFindNetInfo, err := s.findHost(req.NetInfo)
+	hosts, _, err := s.findHost(req.NetInfo)
+	if err != nil {
+		return nil, errors.Wrap(err, "look up hosts by interface info fail")
+	}
+	if len(hosts) > 1 {
+		return nil, errors.Errorf("find multiple host: %s", spew.Sdump(hosts))
+	}
+
+	if len(hosts) == 1 {
+		//如果请求中的 HostId == 0 ，说明客户端是新注册的，那找到主机就是不对的
+		if req.HostId == 0 {
+			return nil, errors.Errorf("find registered host: %s", spew.Sdump(hosts))
+		}
+		//如果只返回一个主机并且 id 一样，注册成功
+		if req.HostId == int64(hosts[1].ID) {
+			//TODO:是否要更新主机信息？
+			return &message.RegisterResponse{AgentId: req.HostId, ConfigVersion: 0}, nil
+		}
+	}
+
+	//没有找到主机的情况
+	//如果没有发送 ID 说明是新注册
+	if req.HostId == 0 {
+		//注册主机
+		h := s.GetHostByRegisterReq(req)
+		h, err := s.RegisterHost(h)
+		if err != nil {
+			return nil, errors.Wrapf(err, "register host %s fail", spew.Sdump(req))
+		}
+		return &message.RegisterResponse{AgentId: int64(h.ID), ConfigVersion: 0}, nil
+	}
+
+	//发送 ID 说明是续租，但是没有找到对应的主机说明有问题
+	return nil, errors.Errorf("can not find host by network interface %s", spew.Sdump(req))
+
+}
+
+// GetHostByRegisterReq 从注册请求中获取主机对象
+func (s *GringottsServer) GetHostByRegisterReq(req *message.RegisterRequest) *model.Host {
+	h := &model.Host{HostName: req.GetHostName()}
+	for _, value := range req.NetInfo {
+		h.HostInterface = append(
+			h.HostInterface,
+			&model.HostInterface{
+				HWAddr:        value.MacAddress,
+				IPAddress:     value.IpAddress,
+				InterfaceName: value.InterfaceName,
+			})
+	}
+	return h
+}
+
+// RegisterHost 注册主机
+func (s *GringottsServer) RegisterHost(host *model.Host) (*model.Host, error) {
+
+	if r := s.db.Create(host); r.Error != nil {
+		return nil, errors.Wrapf(r.Error, "register host %s fail", spew.Sdump(host))
+	}
+	return host, nil
+
 }
 
 // findHost 使用网卡信息查找主机，返回主机对象以及未找到匹配项的网卡信息
-func (s *GringottsServer) findHost(net []*message.RegisterRequest_NetInfo) ([]*model.Host, []*message.RegisterRequest_NetInfo, error) {
+func (s *GringottsServer) findHost(
+	net []*message.RegisterRequest_NetInfo,
+) (
+	[]*model.Host,
+	[]*message.RegisterRequest_NetInfo,
+	error,
+) {
+
 	notFind := make([]*message.RegisterRequest_NetInfo, len(net))
-	hosts := make([]*model.Host, 5)
+	var hosts []*model.Host
 
 	for _, value := range net {
-		h, err := s.findHostByInterface(value)
+		h, err := s.findHostsByInterface(value)
 		if err != nil {
 			return nil, nil, err
 		}
 		if h != nil {
-			hosts = appendHost(hosts, h)
+			hosts = appendHosts(hosts, h...)
 		} else {
 			notFind = append(notFind, value)
 		}
@@ -125,26 +202,46 @@ func (s *GringottsServer) findHost(net []*message.RegisterRequest_NetInfo) ([]*m
 }
 
 // appendHost 添加 host 到 slice 中，并且避免重复
-func appendHost(hosts []*model.Host, host *model.Host) []*model.Host {
+func appendHost(hostSlice []*model.Host, host *model.Host) []*model.Host {
+	//TODO:是否要判断 nil？
+	//if host == nil {
+	//	return hostSlice
+	//}
 	find := false
-	for _, value := range hosts {
+	for _, value := range hostSlice {
 		if value.ID == host.ID {
 			find = true
 			break
 		}
 	}
 
-	if find == false {
-		return append(hosts, host)
+	if !find {
+		return append(hostSlice, host)
 	}
+	return hostSlice
+}
+
+// appendHost 添加 host 到 slice 中，并且避免重复
+func appendHosts(hostSlice []*model.Host, hosts ...*model.Host) []*model.Host {
+	for _, value := range hosts {
+		hostSlice = appendHost(hostSlice, value)
+	}
+	return hostSlice
 }
 
 // findHostByInterface 使用网卡信息查找主机
-func (s *GringottsServer) findHostByInterface(inf *message.RegisterRequest_NetInfo) ([]*model.Host, error) {
-	count := 0
-	//TODO:写实现
-	//s.db.Model(&model.HostInterface{}).Where("HWAddr = ?", inf.MacAddress).Count(&count)
-	return nil, nil
+func (s *GringottsServer) findHostsByInterface(inf *message.RegisterRequest_NetInfo) ([]*model.Host, error) {
+	var results []*model.Host
+
+	if r := s.db.Preload("HostInterface").
+		Table("host").
+		Joins("left join host_interface on host_interface.host_id = host.id").
+		Where("host_interface.hw_addr = ?", inf.MacAddress).
+		Find(&results); r.Error != nil {
+
+		return nil, errors.Wrapf(r.Error, "find hosts by mac address %q fail", inf.MacAddress)
+	}
+	return results, nil
 }
 
 func (s *GringottsServer) newHeartBeatResponse() *message.HeartBeatResponse {

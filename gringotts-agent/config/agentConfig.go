@@ -13,7 +13,7 @@ import (
 const (
 	// PermissionMode 代表文件的默认权限
 	PermissionMode       = 0750
-	defaultServerAddress = "gringotts-server:7777"
+	defaultServerAddress = "gringotts-server:6666"
 	defaultWinWorkPath   = `c:\gringotts\gringotts-agent`
 	defaultLinuxWorkPath = "/var/gringotts/gringotts-agent"
 )

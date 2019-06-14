@@ -15,7 +15,7 @@ type ServerConfig struct {
 }
 
 const (
-	defaultListenerPort    = ":7777"
+	defaultListenerPort    = ":6666"
 	defaultExternalAddress = "gringotts-server"
 	defaultWinWorkPath     = `c:\gringotts\gringotts-server`
 	defaultLinuxWorkPath   = "/var/gringotts/gringotts-server"

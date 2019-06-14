@@ -1,6 +1,7 @@
 module github.com/jinlingan/gringotts
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/protobuf v1.3.1
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jinzhu/gorm v1.9.8
