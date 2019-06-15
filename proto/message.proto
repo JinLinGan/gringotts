@@ -44,7 +44,7 @@ enum SelfMonitorFunc {
 
 message HeartBeatResponse {
   string server_id = 1;
-  int64 config_version = 2;
+  string config_version = 2;
   int64 config_change_time = 3;
   MonitorInfo monitor_info = 4;
 }
@@ -55,12 +55,12 @@ message RegisterRequest {
     string mac_address = 2;
     string interface_name =3;
   }
-  int64 host_id = 1;
+  string host_id = 1;
   string host_name = 2;
   repeated NetInfo net_info = 3;
 }
 
 message RegisterResponse {
-  int64 agent_id = 1;
-  int64 config_version = 2;
+  string agent_id = 1;
+  string config_version = 2;
 }

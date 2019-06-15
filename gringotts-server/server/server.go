@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -123,26 +124,29 @@ func (s *GringottsServer) Register(ctx context.Context,
 
 	if len(hosts) == 1 {
 		//如果请求中的 HostId == 0 ，说明客户端是新注册的，那找到主机就是不对的
-		if req.HostId == 0 {
+		if req.HostId == "" {
 			return nil, errors.Errorf("find registered host: %s", spew.Sdump(hosts))
 		}
 		//如果只返回一个主机并且 id 一样，注册成功
-		if req.HostId == int64(hosts[1].ID) {
+		if req.HostId == strconv.FormatUint(uint64(hosts[0].ID), 10) {
 			//TODO:是否要更新主机信息？
-			return &message.RegisterResponse{AgentId: req.HostId, ConfigVersion: 0}, nil
+			return &message.RegisterResponse{AgentId: req.HostId, ConfigVersion: "0"}, nil
 		}
 	}
 
 	//没有找到主机的情况
 	//如果没有发送 ID 说明是新注册
-	if req.HostId == 0 {
+	if req.HostId == "" {
 		//注册主机
 		h := s.GetHostByRegisterReq(req)
 		h, err := s.RegisterHost(h)
 		if err != nil {
 			return nil, errors.Wrapf(err, "register host %s fail", spew.Sdump(req))
 		}
-		return &message.RegisterResponse{AgentId: int64(h.ID), ConfigVersion: 0}, nil
+		return &message.RegisterResponse{
+			AgentId:       strconv.FormatUint(uint64(h.ID), 10),
+			ConfigVersion: "0",
+		}, nil
 	}
 
 	//发送 ID 说明是续租，但是没有找到对应的主机说明有问题
@@ -247,7 +251,7 @@ func (s *GringottsServer) findHostsByInterface(inf *message.RegisterRequest_NetI
 func (s *GringottsServer) newHeartBeatResponse() *message.HeartBeatResponse {
 	resp := &message.HeartBeatResponse{
 		ServerId:      s.config.GetExternalAddress(),
-		ConfigVersion: int64(time.Now().Minute()),
+		ConfigVersion: strconv.Itoa(time.Now().Minute()),
 		MonitorInfo:   getAllTaskByAgentID(),
 	}
 	return resp

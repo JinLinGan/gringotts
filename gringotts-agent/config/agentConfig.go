@@ -62,36 +62,34 @@ func NewConfig(workPath string) (*AgentConfig, error) {
 // setWorkPath 设置工作目录
 func (c *AgentConfig) setWorkPath(path string) error {
 
-	// 判断 path 是否存在
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		c.logger.Infof("dir %s not exist, to create it", path)
-		// 新建目录
-		if err := os.MkdirAll(path, PermissionMode); err != nil {
-			return errors.Wrapf(err, "can not make dir %s", path)
-		}
+	err := checkAndMkdir(path)
+	if err != nil {
+		return err
 	}
 
 	c.Lock()
 	c.workPath = path
 	c.Unlock()
 
-	execPath := c.GetExecutorPath()
 	//create executorDir
-	if _, err := os.Stat(execPath); os.IsNotExist(err) {
-		c.logger.Infof("dir %s not exist, to create it", execPath)
-		// 新建目录
-		if err := os.MkdirAll(execPath, PermissionMode); err != nil {
-			return errors.Wrapf(err, "can not make dir %s", execPath)
-		}
+	execPath := c.GetExecutorPath()
+	err = checkAndMkdir(execPath)
+	if err != nil {
+		return err
 	}
+
 	//create downloadTempDir
 	downloadTmp := c.GetDownloadTempPath()
-	if _, err := os.Stat(downloadTmp); os.IsNotExist(err) {
-		c.logger.Infof("dir %s not exist, to create it", downloadTmp)
-		// 新建目录
-		if err := os.MkdirAll(downloadTmp, PermissionMode); err != nil {
-			return errors.Wrapf(err, "can not make dir %s", downloadTmp)
-		}
+	err = checkAndMkdir(downloadTmp)
+	if err != nil {
+		return err
+	}
+
+	//create runningInfo
+	runningInfo := c.GetWorkPath() + string(os.PathSeparator) + "runinfo"
+	err = checkAndMkdir(runningInfo)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -103,6 +101,16 @@ func (c *AgentConfig) GetAgentRunningInfoFilePath() string {
 	defer c.RUnlock()
 	runningInfoPath := c.GetWorkPath() + string(os.PathSeparator) + "runinfo"
 	return runningInfoPath + string(os.PathSeparator) + "agent.info"
+}
+
+func checkAndMkdir(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// 新建目录
+		if err := os.MkdirAll(path, PermissionMode); err != nil {
+			return errors.Wrapf(err, "can not make dir %s", path)
+		}
+	}
+	return nil
 }
 
 // GetWorkPath 获取工作目录名称

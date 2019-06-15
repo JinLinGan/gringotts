@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jinlingan/gringotts/gringotts-agent/model"
+
 	"github.com/jinlingan/gringotts/gringotts-agent/util"
 
 	"github.com/pkg/errors"
@@ -30,8 +32,8 @@ type Agent struct {
 
 // agentRunningInfo 保存了 agentID 和 配置版本
 type agentRunningInfo struct {
-	agentID       string
-	configVersion int64
+	AgentID       string
+	ConfigVersion string
 }
 
 // NewAgent 新建 Agent
@@ -53,10 +55,9 @@ func NewAgent(cfg *config.AgentConfig, logger log.Logger) *Agent {
 func (a *Agent) Start() error {
 
 	stop := make(chan int, 1)
-	//TODO:移动到启动时判断
 	agentInfo, err := a.getAgentIDFormWorkDir()
 	if err != nil {
-		a.logger.Info("read agent info failed so set state unregistered")
+		a.logger.Infof("read agent info failed so set state unregistered. Caused by: %v", err)
 		a.isRegistered = false
 	} else {
 		a.isRegistered = true
@@ -82,17 +83,44 @@ func (a *Agent) Start() error {
 
 // register 注册 agent
 func (a *Agent) register() error {
-	//TODO 写代码
 	nicInfos, err := util.GetNIC()
 	if err != nil {
 		return errors.Wrap(err, "get network info fail")
 	}
 	hostName, err := os.Hostname()
 	if err != nil {
-		return errors.Wrap(err, "get hostname fail.")
+		return errors.Wrap(err, "get hostname fail")
 	}
-	_, err = a.apiClient.Register(hostName, nicInfos)
+	info, err := a.apiClient.Register(hostName, nicInfos)
+	if err != nil {
+		return errors.Wrapf(err, "register to server %s fail", a.cfg.GetServerAddress())
+	}
+
+	err = a.saveRegisterInfo(info)
+
 	return err
+}
+
+func (a *Agent) saveRegisterInfo(info *model.RegisterResp) error {
+	path := a.cfg.GetAgentRunningInfoFilePath()
+
+	agentInfo := &agentRunningInfo{
+		AgentID:       info.AgentID,
+		ConfigVersion: info.ConfigVersion,
+	}
+	b, err := json.Marshal(agentInfo)
+	if err != nil {
+		return errors.Wrap(err, "can not marshal agentInfo")
+	}
+	path = filepath.Clean(path)
+
+	err = ioutil.WriteFile(path, b, 0644)
+	if err != nil {
+		return errors.Wrapf(err, "can not write file %s", path)
+	}
+
+	a.agentInfo = agentInfo
+	return nil
 }
 
 func (a *Agent) sendHeartBeat() {
@@ -105,7 +133,8 @@ func (a *Agent) sendHeartBeat() {
 		//send HeartBeat
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		r, err := a.apiClient.HeartBeat(ctx, a.GetAgentID())
-		//
+		cancel()
+
 		a.logger.Debugf("send HeartBeat (%s)", time.Since(start))
 		if err != nil {
 			a.logger.Errorf("send HeartBeat with err: %v", err)
@@ -122,7 +151,6 @@ func (a *Agent) sendHeartBeat() {
 
 		}
 		<-ticker.C
-		cancel()
 
 	}
 }
@@ -131,7 +159,7 @@ func (a *Agent) getAgentIDFormWorkDir() (*agentRunningInfo, error) {
 
 	path := a.cfg.GetAgentRunningInfoFilePath()
 
-	agentInfo := new(agentRunningInfo)
+	agentInfo := &agentRunningInfo{}
 
 	b, err := ioutil.ReadFile(filepath.Clean(path))
 	if err != nil {
@@ -151,21 +179,21 @@ func (a *Agent) getAgentIDFormWorkDir() (*agentRunningInfo, error) {
 func (a *Agent) GetAgentID() string {
 	a.RLock()
 	defer a.RUnlock()
-	return a.agentInfo.agentID
+	return a.agentInfo.AgentID
 }
 
 // GetConfigVersion 获取配置版本
-func (a *Agent) GetConfigVersion() int64 {
+func (a *Agent) GetConfigVersion() string {
 	a.RLock()
 	defer a.RUnlock()
-	return a.agentInfo.configVersion
+	return a.agentInfo.ConfigVersion
 }
 
 // SetConfigVersion 设置配置版本
-func (a *Agent) SetConfigVersion(v int64) error {
+func (a *Agent) SetConfigVersion(v string) error {
 
 	a.Lock()
-	a.agentInfo.configVersion = v
+	a.agentInfo.ConfigVersion = v
 	a.Unlock()
 
 	b, err := json.Marshal(a.agentInfo)

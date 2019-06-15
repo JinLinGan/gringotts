@@ -136,7 +136,6 @@ func (c *Client) Register(hostName string, nicInfos []*model.NICInfo) (*model.Re
 	index := 0
 	for _, v := range nicInfos {
 		n := &message.RegisterRequest_NetInfo{
-			//TODO:一个网卡多个 IP 地址的情况要如何处理
 			IpAddress:     v.IPAddress,
 			MacAddress:    v.MacAddress,
 			InterfaceName: v.Name,
