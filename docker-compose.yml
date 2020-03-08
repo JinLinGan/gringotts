@@ -1,0 +1,18 @@
+version: '3'
+services:
+#  agent:
+#    build:
+#      context: .
+#      dockerfile: ./scripts/dockerfiles/gringotts-agent/Dockerfile
+  mysql:
+    image: mysql:5
+    ports:
+    - 3306:3306
+    volumes:
+    - ./scripts/database/init:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: root.123
+    network_mode: gringotts
+networks:
+  gringotts:
+    external: true

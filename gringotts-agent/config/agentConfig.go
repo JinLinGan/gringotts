@@ -6,14 +6,14 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/jinlingan/gringotts/common/log"
+	"github.com/jinlingan/gringotts/pkg/log"
 	"github.com/pkg/errors"
 )
 
 const (
 	// PermissionMode 代表文件的默认权限
 	PermissionMode       = 0750
-	defaultServerAddress = "gringotts-server:6666"
+	defaultServerAddress = "server:6666"
 	defaultWinWorkPath   = `c:\gringotts\gringotts-agent`
 	defaultLinuxWorkPath = "/var/gringotts/gringotts-agent"
 )

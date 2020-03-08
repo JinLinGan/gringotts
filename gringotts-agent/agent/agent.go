@@ -15,9 +15,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/jinlingan/gringotts/common/log"
 	"github.com/jinlingan/gringotts/gringotts-agent/communication"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
+	"github.com/jinlingan/gringotts/pkg/log"
 )
 
 // Agent Gringotts Agent
@@ -29,6 +29,8 @@ type Agent struct {
 	isRegistered bool
 	agentInfo    *agentRunningInfo
 }
+
+//var _ io.Writer = &Agent{}
 
 // agentRunningInfo 保存了 agentID 和 配置版本
 type agentRunningInfo struct {
@@ -51,9 +53,12 @@ func NewAgent(cfg *config.AgentConfig, logger log.Logger) *Agent {
 	}
 }
 
+func getHostInfo() {
+
+}
+
 // Start 启动 Agent
 func (a *Agent) Start() error {
-
 	stop := make(chan int, 1)
 	agentInfo, err := a.getAgentIDFormWorkDir()
 	if err != nil {

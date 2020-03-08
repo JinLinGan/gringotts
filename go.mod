@@ -14,3 +14,5 @@ require (
 	google.golang.org/grpc v1.20.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
+
+go 1.13

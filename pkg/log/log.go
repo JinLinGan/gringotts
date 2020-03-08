@@ -13,8 +13,13 @@ import (
 
 const (
 	//包名变化记得修改这里的值
-	logrusPkgName   = "github.com/sirupsen/logrus"
-	myLoggerPkgName = "github.com/jinlingan/gringotts/common/log"
+	logrusPkgName      = "github.com/sirupsen/logrus"
+	myLoggerPkgName    = "github.com/jinlingan/gringotts/pkg/log"
+	functionNamePrefix = "github.com/jinlingan/gringotts/"
+
+	buildDir              = string(os.PathSeparator) + "gringotts" + string(os.PathSeparator)
+	buildDirLen           = len(buildDir)
+	functionNamePrefixLen = len(functionNamePrefix)
 )
 
 // NewStdAndFileLogger 新建 AgentLogger
@@ -84,8 +89,22 @@ func caller(_ *runtime.Frame) (function string, file string) {
 		// If the caller isn't part of this package, we're done
 		pkg := getPackageName(f.Function)
 		if pkg != logrusPkgName && pkg != myLoggerPkgName {
-			file := fmt.Sprintf(" %s:%d", f.File, f.Line)
-			return f.Function, file
+
+			idx := strings.Index(f.File, buildDir)
+			filename := f.File
+			if idx >= 0 {
+				filename = f.File[idx+buildDirLen : len(f.File)]
+			}
+
+			file := fmt.Sprintf(" %s:%d", filename, f.Line)
+			functionName := f.Function
+			fidx := strings.Index(functionName, functionNamePrefix)
+
+			if fidx == 0 {
+				functionName = functionName[fidx+functionNamePrefixLen : len(functionName)]
+			}
+
+			return functionName, file
 		}
 	}
 

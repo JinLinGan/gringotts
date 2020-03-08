@@ -5,9 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/jinlingan/gringotts/common/log"
 	"github.com/jinlingan/gringotts/gringotts-agent/agent"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
+	"github.com/jinlingan/gringotts/pkg/log"
 	"github.com/spf13/cobra"
 )
 

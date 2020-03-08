@@ -13,9 +13,9 @@ import (
 
 	"github.com/jinlingan/gringotts/gringotts-server/model"
 
-	"github.com/jinlingan/gringotts/common/log"
-	"github.com/jinlingan/gringotts/common/message"
 	"github.com/jinlingan/gringotts/gringotts-server/config"
+	"github.com/jinlingan/gringotts/pkg/log"
+	"github.com/jinlingan/gringotts/pkg/message"
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -34,7 +34,7 @@ type GringottsServer struct {
 //NewServer 新建 Server 对象
 func NewServer(cfg *config.ServerConfig, logger log.Logger) (*GringottsServer, error) {
 	//TODO:移动到配置文件中
-	dataSourceName := "gringotts:gringotts@tcp(127.0.0.1)/gringotts?parseTime=true"
+	dataSourceName := "gringotts:gringotts@tcp(mysql)/gringotts?parseTime=true"
 	db, err := gorm.Open("mysql", dataSourceName)
 	if err != nil {
 		return nil, errors.Wrap(err, "open database error")

@@ -8,10 +8,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/jinlingan/gringotts/common/log"
-	"github.com/jinlingan/gringotts/common/message"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
 	"github.com/jinlingan/gringotts/gringotts-agent/model"
+	"github.com/jinlingan/gringotts/pkg/log"
+	"github.com/jinlingan/gringotts/pkg/message"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )

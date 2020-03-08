@@ -1,21 +1,32 @@
-linters-settings:
-  golint:
-    # minimal confidence for issues, default is 0.8
-    min-confidence: 0.3
+run:
+  # 超时时间
+  timeout: 100m
+
+  # # v1.21.0 版本并发检查好像有 Bug，暂时设置并发度为 1
+  # concurrency: 1
+
+  # 排除文件
+  skip-files:
+    - plugins/parsers/influx/machine.go
 
 linters:
   enable-all: true
+  disable:
+    - godox
+    - gochecknoinits
 
 issues:
+
+  # 取消默认排除规则
   exclude-use-default: false
 
+  # 从 PTO 相关的提交开始检查
+  new-from-rev: 594859e5d31bf083efbf0c783754e1a82b2b295f
+
   exclude-rules:
-    # Exclude some linters from running on tests files.
-    # - path: gringotts-server/cmd/root.go
-    #   linters:
-    #     - gochecknoglobals
-    #   text: "rootCmd"
     - linters:
-        - gosec
-      text: "unhandled"
-      source: ".WriteString\\("
+        - stylecheck
+      text: "ST1000:"
+    - linters:
+        - errcheck
+      source: "^\\s*defer\\s"
