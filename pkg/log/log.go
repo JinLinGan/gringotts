@@ -11,6 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// gLog 全局日志
+var gLog Logger
+
+//TODO: 加锁？
+func SetDefaultLogger(l Logger) {
+	gLog = l
+}
+
 const (
 	//包名变化记得修改这里的值
 	logrusPkgName      = "github.com/sirupsen/logrus"
@@ -23,7 +31,7 @@ const (
 )
 
 // NewStdAndFileLogger 新建 AgentLogger
-func NewStdAndFileLogger(filepath string) Logger {
+func NewStdAndFileLogger(filepath string) *multiLogger {
 	return &multiLogger{
 		parentLogs: []*logrus.Logger{
 			{
@@ -246,4 +254,79 @@ func (l *multiLogger) Errore(err error, format string, args ...interface{}) {
 //Fatale
 func (l *multiLogger) Fatale(err error, format string, args ...interface{}) {
 	l.Loge(logrus.FatalLevel, err, format, args...)
+}
+
+//Debugf
+func Debugf(format string, args ...interface{}) {
+	gLog.Debugf(format, args...)
+}
+
+//Infof
+func Infof(format string, args ...interface{}) {
+	gLog.Infof(format, args...)
+}
+
+//Warnf
+func Warnf(format string, args ...interface{}) {
+	gLog.Warnf(format, args...)
+}
+
+//Errorf
+func Errorf(format string, args ...interface{}) {
+	gLog.Errorf(format, args...)
+}
+
+//Fatalf
+func Fatalf(format string, args ...interface{}) {
+	gLog.Fatalf(format, args...)
+}
+
+//Debug
+func Debug(args ...interface{}) {
+	gLog.Debug(args...)
+}
+
+//Info
+func Info(args ...interface{}) {
+	gLog.Info(args...)
+}
+
+//Warn
+func Warn(args ...interface{}) {
+	gLog.Warn(args...)
+}
+
+//Error
+func Error(args ...interface{}) {
+	gLog.Error(args...)
+}
+
+//Fatal
+func Fatal(args ...interface{}) {
+	gLog.Fatal(args...)
+}
+
+//Debuge
+func Debuge(err error, format string, args ...interface{}) {
+	gLog.Debuge(err, format, args...)
+}
+
+//Infoe
+func Infoe(err error, format string, args ...interface{}) {
+	gLog.Infoe(err, format, args...)
+}
+
+//Warne
+func Warne(err error, format string, args ...interface{}) {
+	gLog.Warne(err, format, args...)
+}
+
+//Errore
+func Errore(err error, format string, args ...interface{}) {
+	gLog.Errore(err, format, args...)
+}
+
+//Fatale
+func Fatale(err error, format string, args ...interface{}) {
+	gLog.Fatale(err, format, args...)
 }

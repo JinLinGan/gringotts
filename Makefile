@@ -1,6 +1,6 @@
 DOCKERPATH ?= /private/var/gringotts/docker
 
-build-grpc:
+build-grpc: proto/message.proto
 	protoc -I proto proto/message.proto  --go_out=plugins=grpc:pkg/message
 
 check-all:
@@ -29,6 +29,16 @@ build-dev-image:
 	docker build  -f ./scripts/dockerfiles/dlv/Dockerfile . -t harbor.gk8s.ete.ffcs.cn/gringotts/devtool:latest
 create-docker-network:
 	-docker network create gringotts
+
+run-agent-docker: build-agent-linux create-docker-network
+	-docker rm -f agent
+	docker run \
+		--entrypoint /gringotts/bin/agent \
+		-v /Users/jinlin/code/golang/src/github.com/jinlingan/gringotts/build/bin:/gringotts/bin \
+		--name agent \
+		--network gringotts \
+		harbor.gk8s.ete.ffcs.cn/gringotts/devtool:latest start
+
 run-debug-agent-docker: build-agent-linux create-docker-network
 	-docker rm -f agent
 	docker run -d --entrypoint dlv \

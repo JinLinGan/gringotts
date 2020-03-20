@@ -56,6 +56,7 @@ func parseFlagsAndStartAgent(cmd *cobra.Command, args []string) error {
 	logger := log.NewStdAndFileLogger(p)
 
 	// 使用新的 logger 替换
+	log.SetDefaultLogger(logger)
 	cfg.SetLogger(logger)
 
 	s, err := flags.GetString(serverAddressFlagName)

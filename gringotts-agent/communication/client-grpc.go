@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/jinlingan/gringotts/pkg/metadata/host"
+
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
 	"github.com/jinlingan/gringotts/gringotts-agent/model"
 	"github.com/jinlingan/gringotts/pkg/log"
@@ -124,24 +126,33 @@ func (c *Client) DownloadFile(filename string, sha1 string, destPath string, tem
 }
 
 //Register 注册 agent
-func (c *Client) Register(hostName string, nicInfos []*model.NICInfo) (*model.RegisterResp, error) {
+func (c *Client) Register(agentID string, hostInfo *host.HostInfo) (*model.RegisterResp, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	req := &message.RegisterRequest{
-		HostName: hostName,
+		AgentID:              agentID,
+		HostName:             hostInfo.HostName,
+		HostUUID:             hostInfo.HostUUID,
+		Os:                   hostInfo.OS,
+		Platform:             hostInfo.Platform,
+		PlatformFamily:       hostInfo.PlatformFamily,
+		PlatformVersion:      hostInfo.PlatformVersion,
+		KernelVersion:        hostInfo.KernelVersion,
+		VirtualizationSystem: hostInfo.VirtualizationSystem,
+		VirtualizationRole:   hostInfo.VirtualizationRole,
 	}
-	req.NetInfo = make([]*message.RegisterRequest_NetInfo, len(nicInfos))
 
-	index := 0
-	for _, v := range nicInfos {
-		n := &message.RegisterRequest_NetInfo{
-			IpAddress:     v.IPAddress,
-			MacAddress:    v.MacAddress,
-			InterfaceName: v.Name,
+	for _, n := range hostInfo.Interfaces {
+		nn := &message.RegisterRequest_Interface{
+			Name:         n.Name,
+			HardwareAddr: n.HardwareAddr,
 		}
-		req.NetInfo[index] = n
-		index++
+
+		for _, a := range n.Addrs {
+			nn.IpAddrs = append(nn.IpAddrs, a)
+		}
+		req.Interfaces = append(req.Interfaces, nn)
 	}
 
 	resp, err := c.client.Register(ctx, req)

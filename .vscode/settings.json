@@ -34,5 +34,8 @@
     ],
     "todo-tree.excludeGlobs": [
         "vendor"
+    ],
+    "todo-tree.filtering.excludeGlobs": [
+        "vendor"
     ]
 }

@@ -9,15 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jinlingan/gringotts/gringotts-agent/model"
-
-	"github.com/jinlingan/gringotts/gringotts-agent/util"
-
-	"github.com/pkg/errors"
-
 	"github.com/jinlingan/gringotts/gringotts-agent/communication"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
+	"github.com/jinlingan/gringotts/gringotts-agent/model"
 	"github.com/jinlingan/gringotts/pkg/log"
+	"github.com/jinlingan/gringotts/pkg/metadata/host"
+	"github.com/pkg/errors"
 )
 
 // Agent Gringotts Agent
@@ -27,10 +24,16 @@ type Agent struct {
 	apiClient    *communication.Client
 	logger       log.Logger
 	isRegistered bool
-	agentInfo    *agentRunningInfo
+	agentInfo    agentRunningInfo
 }
 
 //var _ io.Writer = &Agent{}
+
+// 注册超时时间
+const registerTimeOut = time.Second * 60
+
+// 注册间隔
+const registerInterval = time.Second * 5
 
 // agentRunningInfo 保存了 agentID 和 配置版本
 type agentRunningInfo struct {
@@ -53,63 +56,62 @@ func NewAgent(cfg *config.AgentConfig, logger log.Logger) *Agent {
 	}
 }
 
-func getHostInfo() {
+func (a *Agent) register() (*model.RegisterResp, error) {
+	info := host.GetHostInfo()
 
+	t := time.After(registerTimeOut)
+	for {
+		select {
+		case <-t:
+			return nil, errors.Errorf("注册超时，当前超时时间为 %.f 秒", registerTimeOut.Seconds())
+		default:
+			resp, err := a.apiClient.Register(a.agentInfo.AgentID, info)
+			if err == nil {
+				return resp, err
+			}
+
+			a.logger.Errorf("注册失败，等待 %.f 秒后重试: %s", registerInterval.Seconds(), err)
+			time.Sleep(registerInterval)
+		}
+	}
 }
 
 // Start 启动 Agent
 func (a *Agent) Start() error {
 	stop := make(chan int, 1)
 	agentInfo, err := a.getAgentIDFormWorkDir()
+
 	if err != nil {
 		a.logger.Infof("read agent info failed so set state unregistered. Caused by: %v", err)
 		a.isRegistered = false
 	} else {
 		a.isRegistered = true
-		a.agentInfo = agentInfo
+		a.agentInfo = *agentInfo
+	}
+	resp, err := a.register()
+	if err != nil {
+		a.logger.Errorf("register agent to server %s fail", a.cfg.GetServerAddress())
+		return errors.New("start agent fail")
 	}
 
-	// 如果 Agent 还没有注册
-	if !a.isRegistered {
+	a.logger.Infof("获取到 AgentID=%s，ConfigVersion=%s", resp.AgentID, resp.ConfigVersion)
 
-		// 启动注册流程
-		//TODO:重试 N 次
-		if err := a.register(); err != nil {
-			a.logger.Errore(err, "register agent to server %s fail", a.cfg.GetServerAddress())
-			return errors.New("start agent fail")
-		}
+	err = a.saveRegisterInfo(resp)
+
+	if err != nil {
+		a.logger.Errorf("保存注册信息失败. Caused by: %v", err)
+		return errors.New("start agent fail")
 	}
-
 	//开始发送心跳
 	go a.sendHeartBeat()
 	<-stop
 	return nil
 }
 
-// register 注册 agent
-func (a *Agent) register() error {
-	nicInfos, err := util.GetNIC()
-	if err != nil {
-		return errors.Wrap(err, "get network info fail")
-	}
-	hostName, err := os.Hostname()
-	if err != nil {
-		return errors.Wrap(err, "get hostname fail")
-	}
-	info, err := a.apiClient.Register(hostName, nicInfos)
-	if err != nil {
-		return errors.Wrapf(err, "register to server %s fail", a.cfg.GetServerAddress())
-	}
-
-	err = a.saveRegisterInfo(info)
-
-	return err
-}
-
 func (a *Agent) saveRegisterInfo(info *model.RegisterResp) error {
 	path := a.cfg.GetAgentRunningInfoFilePath()
 
-	agentInfo := &agentRunningInfo{
+	agentInfo := agentRunningInfo{
 		AgentID:       info.AgentID,
 		ConfigVersion: info.ConfigVersion,
 	}

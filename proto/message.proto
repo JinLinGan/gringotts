@@ -1,66 +1,78 @@
 syntax = "proto3";
 
 service gringotts {
-  rpc HeartBeat(HeartBeatRequest) returns (HeartBeatResponse);
-  rpc DownloadFile(File) returns (stream FileChunk);
-  rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc HeartBeat (HeartBeatRequest) returns (HeartBeatResponse);
+    rpc DownloadFile (File) returns (stream FileChunk);
+    rpc Register (RegisterRequest) returns (RegisterResponse);
 }
 
 message File {
-  string file_name = 1;
-  string sha1_hash = 2;
+    string file_name = 1;
+    string sha1_hash = 2;
 }
 
-message FileChunk { bytes data = 1; }
+message FileChunk {
+    bytes data = 1;
+}
 
 message HeartBeatRequest {
-  string agent_id = 1;
-  string host_name = 2;
-  int64 time = 3;
+    string agent_id = 1;
+    string host_name = 2;
+    int64 time = 3;
 }
 
-message MonitorInfo { repeated MonitorItem Items = 1; }
+message MonitorInfo {
+    repeated MonitorItem Items = 1;
+}
 message MonitorItem {
-  int64 task_id = 1;
-  int64 exec_interval_second = 2;
-  MonitorItemType type = 3;
+    int64 task_id = 1;
+    int64 exec_interval_second = 2;
+    MonitorItemType type = 3;
 
-  SelfMonitorFunc self_func = 4;
-  string self_func_config = 5;
+    SelfMonitorFunc self_func = 4;
+    string self_func_config = 5;
 
-  string third_party_func_name = 6;
-  string third_party_dependency_files = 7;
+    string third_party_func_name = 6;
+    string third_party_dependency_files = 7;
 }
 
 enum MonitorItemType {
-  SELF = 0;
-  THIRD_PARTY = 1;
+    SELF = 0;
+    THIRD_PARTY = 1;
 }
 
 enum SelfMonitorFunc {
-  CPU = 0;
-  MEM = 1;
+    CPU = 0;
+    MEM = 1;
 }
 
 message HeartBeatResponse {
-  string server_id = 1;
-  string config_version = 2;
-  int64 config_change_time = 3;
-  MonitorInfo monitor_info = 4;
+    string server_id = 1;
+    string config_version = 2;
+    int64 config_change_time = 3;
+    MonitorInfo monitor_info = 4;
 }
 
 message RegisterRequest {
-  message NetInfo {
-    string ip_address = 1;
-    string mac_address = 2;
-    string interface_name =3;
-  }
-  string host_id = 1;
-  string host_name = 2;
-  repeated NetInfo net_info = 3;
+    message Interface {
+        string name = 1;
+        string hardwareAddr = 2;
+        repeated string ipAddrs = 3;
+    }
+    string agentID = 1;
+    string hostName = 2;
+    string hostUUID = 3;
+    string os = 4;
+    string platform = 5;
+    string platformFamily = 6;
+    string platformVersion = 7;
+    string kernelVersion = 8;
+    string virtualizationSystem = 9;
+    string virtualizationRole = 10;
+    repeated Interface Interfaces = 111;
 }
 
 message RegisterResponse {
-  string agent_id = 1;
-  string config_version = 2;
+    string agent_id = 1;
+    string config_version = 2;
 }
