@@ -1,7 +1,6 @@
 package model
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -11,6 +10,9 @@ import (
 
 	"github.com/jinlingan/gringotts/pkg/message"
 )
+
+//TODO:Host 改为 Agent
+//TODO:增加 Agent 版本信息
 
 // Host 主机
 type Host struct {
@@ -29,6 +31,10 @@ type Host struct {
 	CreateTime           int64
 	UpdateTime           int64
 	LastHeartBeatTime    int64
+	ConfigVersion        int64
+
+	//工作目录暂时不要
+	//WorkingDir string
 }
 
 type Interface struct {
@@ -37,10 +43,20 @@ type Interface struct {
 	IpAddrs      []string `protobuf:"bytes,3,rep,name=ipAddrs,proto3" json:"ipAddrs,omitempty"`
 }
 
-type HostService interface {
-	Create(context.Context, *Host) error
-	//IsExist(context.Context, agentID string) error
-	Find(ctx context.Context, agentID string) (*Host, error)
+type HostStore interface {
+	Create(*Host) (agentID string, err error)
+
+	Find(agentID string) (*Host, error)
+
+	UpdateHeartBeatTime(agentID string, time int64) error
+
+	Exist(agentID string) (bool, error)
+
+	UpdateConfigVersion(agentID string) error
+
+	GetConfigVersion(agentID string) (int64, error)
+
+	UpdateAgentInfo(*Host) error
 }
 
 func NewHostFromGRPC(req *message.RegisterRequest) *Host {
@@ -77,6 +93,8 @@ func NewHostFromGRPC(req *message.RegisterRequest) *Host {
 
 //CheckHostChanceAcceptable 判断变更是否在可接受范围
 func CheckHostChanceAcceptable(ori *Host, now *Host) (allSame bool, acceptable bool, msg string) {
+	//TODO:对于 docker 环境如何判断？是否直接放过？把 Agent ID 设置成 类似UUID的字符串是否有助于减少冲突，但是这样也无法避免拷贝
+
 	allSame = true
 	changeCount := 0
 	ok, cmsg := checkHostName(ori, now)
@@ -136,7 +154,7 @@ func checkHostUUID(ori *Host, now *Host) (same bool, msg string) {
 		return true, ""
 	}
 
-	return false, fmt.Sprintf("主机名不一致：旧值为 %q 新值为 %q", ori.HostUUID, now.HostUUID)
+	return false, fmt.Sprintf("UUID 不一致：旧值为 %q 新值为 %q", ori.HostUUID, now.HostUUID)
 }
 
 func checkVirtualization(ori *Host, now *Host) (same bool, msg string) {
@@ -186,7 +204,7 @@ func checkOSVersion(ori *Host, now *Host) (same bool, msg string) {
 }
 
 func checkInterfaces(ori *Host, now *Host) (same bool, msg string) {
-	var interfaceNameMap map[string]struct{}
+	interfaceNameMap := map[string]struct{}{}
 	same = true
 	for _, nn := range now.Interfaces {
 		found := false
@@ -197,7 +215,7 @@ func checkInterfaces(ori *Host, now *Host) (same bool, msg string) {
 				found = true
 
 				// 对比 Mac 和 IP
-				if on.HardwareAddr != nn.HardwareAddr || util.StringSliceEqual(&on.IpAddrs, &nn.IpAddrs) {
+				if on.HardwareAddr != nn.HardwareAddr || !util.StringSliceEqual(&on.IpAddrs, &nn.IpAddrs) {
 					onJSON, _ := json.Marshal(on)
 					msg = msg + fmt.Sprintf("网卡 %s 信息不匹配，旧值 %s 新值 %s", on.Name, onJSON, nnJSON)
 					same = false

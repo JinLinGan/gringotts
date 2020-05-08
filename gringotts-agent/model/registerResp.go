@@ -5,5 +5,5 @@ type RegisterResp struct {
 	//TODO:AgentID可能需要是个 UUID
 
 	AgentID       string
-	ConfigVersion string
+	ConfigVersion int64
 }

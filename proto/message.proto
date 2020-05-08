@@ -4,6 +4,10 @@ service gringotts {
     rpc HeartBeat (HeartBeatRequest) returns (HeartBeatResponse);
     rpc DownloadFile (File) returns (stream FileChunk);
     rpc Register (RegisterRequest) returns (RegisterResponse);
+    rpc GetJobs (GetJobsRequest) returns (GetJobsResponse);
+    rpc AddJob(AddJobRequest) returns(AddJobResponse);
+    rpc DelJob(DelJobRequest) returns(DelJobResponse);
+//    rpc SendMetrics
 }
 
 message File {
@@ -16,41 +20,27 @@ message FileChunk {
 }
 
 message HeartBeatRequest {
-    string agent_id = 1;
-    string host_name = 2;
-    int64 time = 3;
+    string agentID = 1;
+    repeated  JobRunningInfo jobs = 2;
+    int64 clientTime = 3;
 }
 
-message MonitorInfo {
-    repeated MonitorItem Items = 1;
-}
-message MonitorItem {
-    int64 task_id = 1;
-    int64 exec_interval_second = 2;
-    MonitorItemType type = 3;
-
-    SelfMonitorFunc self_func = 4;
-    string self_func_config = 5;
-
-    string third_party_func_name = 6;
-    string third_party_dependency_files = 7;
+message JobRunningInfo {
+    string jobID =1;
+    JobRunningState state = 2;
+    string errorMsg = 3;
+    int64 lastRunningTime = 4;
 }
 
-enum MonitorItemType {
-    SELF = 0;
-    THIRD_PARTY = 1;
-}
-
-enum SelfMonitorFunc {
-    CPU = 0;
-    MEM = 1;
+enum JobRunningState{
+    OK = 0;
+    Error = 1;
 }
 
 message HeartBeatResponse {
     string server_id = 1;
-    string config_version = 2;
-    int64 config_change_time = 3;
-    MonitorInfo monitor_info = 4;
+    int64 config_version = 2;
+    int32 serverTime=3;
 }
 
 message RegisterRequest {
@@ -69,10 +59,125 @@ message RegisterRequest {
     string kernelVersion = 8;
     string virtualizationSystem = 9;
     string virtualizationRole = 10;
-    repeated Interface Interfaces = 111;
+    repeated Interface Interfaces = 11;
+
+    string agentVersion = 12;
 }
 
 message RegisterResponse {
     string agent_id = 1;
-    string config_version = 2;
+    int64 config_version = 2;
 }
+
+enum JobRunner {
+    Telegraf = 0;
+    Datadog = 1;
+}
+
+message Job{
+    string jobID =1;
+    JobRunner runnerType = 2;
+    string runnerModule =3;
+    string moduleVersion = 4;
+    int32 interval = 5;
+    string config = 6;
+    int32 createTime = 7;
+    int32 updateTime = 8;
+}
+
+message GetJobsRequest {
+    string agentID = 1;
+}
+
+message GetJobsResponse {
+    int64 config_version = 1;
+    repeated Job jobs = 2;
+}
+
+message AddJobRequest{
+    string agentID = 1;
+    JobRunner runnerType = 2;
+    string runnerModule =3;
+    string moduleVersion = 4;
+    int32 interval = 5;
+    string config = 6;
+}
+
+message AddJobResponse{
+    string jobID =1;
+}
+
+message DelJobRequest{
+    string agentID = 1;
+    string jobID =2;
+}
+
+message DelJobResponse{
+    bool deleted =1;
+}
+
+message LabelPair {
+    string name  = 1;
+    string value = 2;
+}
+
+enum MetricType {
+    COUNTER    = 0;
+    GAUGE      = 1;
+    SUMMARY    = 2;
+    UNTYPED    = 3;
+    HISTOGRAM  = 4;
+}
+
+message Gauge {
+    double value = 1;
+}
+
+message Counter {
+    double value = 1;
+}
+
+message Quantile {
+    double quantile = 1;
+    double value    = 2;
+}
+
+message Summary {
+    uint64   sample_count = 1;
+    double   sample_sum   = 2;
+    repeated Quantile quantile     = 3;
+}
+
+message Untyped {
+    double value = 1;
+}
+
+message Histogram {
+    uint64 sample_count = 1;
+    double sample_sum   = 2;
+    repeated Bucket bucket       = 3; // Ordered in increasing order of upper_bound, +Inf bucket is optional.
+}
+
+message Bucket {
+    uint64 cumulative_count = 1; // Cumulative in increasing order.
+    double upper_bound = 2;      // Inclusive.
+}
+
+message Metric {
+    repeated LabelPair label        = 1;
+    Gauge     gauge        = 2;
+    Counter   counter      = 3;
+    Summary   summary      = 4;
+    Untyped   untyped      = 5;
+    Histogram histogram    = 7;
+    int64     timestamp_ms = 6;
+}
+
+message MetricFamily {
+    string     name   = 1;
+    string     help   = 2;
+    MetricType type   = 3;
+    repeated Metric     metric = 4;
+}
+
+message

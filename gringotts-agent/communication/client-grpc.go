@@ -42,6 +42,21 @@ func NewClient(cfg *config.AgentConfig, logger log.Logger) (*Client, error) {
 	return instance, nil
 }
 
+func NewClientForTools(serverAddr string) (*Client, error) {
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+
+	instance := &Client{
+		conn:   conn,
+		client: message.NewGringottsClient(conn),
+		logger: log.NewStdoutLogger(),
+	}
+
+	return instance, nil
+}
+
 //Close 关闭连接
 func (c *Client) Close() {
 	if err := c.conn.Close(); err != nil {
@@ -51,15 +66,11 @@ func (c *Client) Close() {
 
 func (c *Client) newHeartBeatRequest(agentID string) *message.HeartBeatRequest {
 	req := message.HeartBeatRequest{
-		AgentId: agentID,
-		Time:    time.Now().UnixNano(),
+		AgentID:    agentID,
+		ClientTime: time.Now().Unix(),
 	}
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "unknown"
-		c.logger.Infof("get hostname with err: %s", err)
-	}
-	req.HostName = hostname
+
+	//TODO:带上 Job 信息
 	return &req
 }
 
@@ -164,4 +175,12 @@ func (c *Client) Register(agentID string, hostInfo *host.HostInfo) (*model.Regis
 		ConfigVersion: resp.ConfigVersion,
 	}
 	return ret, nil
+}
+
+//LoadConfig 从服务端加载配置
+func (c *Client) LoadConfig(agentID string) (*message.GetJobsResponse, error) {
+	req := &message.GetJobsRequest{
+		AgentID: agentID,
+	}
+	return c.client.GetJobs(context.Background(), req)
 }

@@ -7,6 +7,7 @@ import (
 	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
+	wrappers "github.com/golang/protobuf/ptypes/wrappers"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -24,53 +25,53 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type MonitorItemType int32
+type JobRunningState int32
 
 const (
-	MonitorItemType_SELF        MonitorItemType = 0
-	MonitorItemType_THIRD_PARTY MonitorItemType = 1
+	JobRunningState_OK    JobRunningState = 0
+	JobRunningState_Error JobRunningState = 1
 )
 
-var MonitorItemType_name = map[int32]string{
-	0: "SELF",
-	1: "THIRD_PARTY",
+var JobRunningState_name = map[int32]string{
+	0: "OK",
+	1: "Error",
 }
 
-var MonitorItemType_value = map[string]int32{
-	"SELF":        0,
-	"THIRD_PARTY": 1,
+var JobRunningState_value = map[string]int32{
+	"OK":    0,
+	"Error": 1,
 }
 
-func (x MonitorItemType) String() string {
-	return proto.EnumName(MonitorItemType_name, int32(x))
+func (x JobRunningState) String() string {
+	return proto.EnumName(JobRunningState_name, int32(x))
 }
 
-func (MonitorItemType) EnumDescriptor() ([]byte, []int) {
+func (JobRunningState) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{0}
 }
 
-type SelfMonitorFunc int32
+type JobRunner int32
 
 const (
-	SelfMonitorFunc_CPU SelfMonitorFunc = 0
-	SelfMonitorFunc_MEM SelfMonitorFunc = 1
+	JobRunner_Telegraf JobRunner = 0
+	JobRunner_Datadog  JobRunner = 1
 )
 
-var SelfMonitorFunc_name = map[int32]string{
-	0: "CPU",
-	1: "MEM",
+var JobRunner_name = map[int32]string{
+	0: "Telegraf",
+	1: "Datadog",
 }
 
-var SelfMonitorFunc_value = map[string]int32{
-	"CPU": 0,
-	"MEM": 1,
+var JobRunner_value = map[string]int32{
+	"Telegraf": 0,
+	"Datadog":  1,
 }
 
-func (x SelfMonitorFunc) String() string {
-	return proto.EnumName(SelfMonitorFunc_name, int32(x))
+func (x JobRunner) String() string {
+	return proto.EnumName(JobRunner_name, int32(x))
 }
 
-func (SelfMonitorFunc) EnumDescriptor() ([]byte, []int) {
+func (JobRunner) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{1}
 }
 
@@ -161,12 +162,12 @@ func (m *FileChunk) GetData() []byte {
 }
 
 type HeartBeatRequest struct {
-	AgentId              string   `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	HostName             string   `protobuf:"bytes,2,opt,name=host_name,json=hostName,proto3" json:"host_name,omitempty"`
-	Time                 int64    `protobuf:"varint,3,opt,name=time,proto3" json:"time,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	AgentID              string            `protobuf:"bytes,1,opt,name=agentID,proto3" json:"agentID,omitempty"`
+	Jobs                 []*JobRunningInfo `protobuf:"bytes,2,rep,name=jobs,proto3" json:"jobs,omitempty"`
+	ClientTime           int64             `protobuf:"varint,3,opt,name=clientTime,proto3" json:"clientTime,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
 func (m *HeartBeatRequest) Reset()         { *m = HeartBeatRequest{} }
@@ -194,168 +195,104 @@ func (m *HeartBeatRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_HeartBeatRequest proto.InternalMessageInfo
 
-func (m *HeartBeatRequest) GetAgentId() string {
+func (m *HeartBeatRequest) GetAgentID() string {
 	if m != nil {
-		return m.AgentId
+		return m.AgentID
 	}
 	return ""
 }
 
-func (m *HeartBeatRequest) GetHostName() string {
+func (m *HeartBeatRequest) GetJobs() []*JobRunningInfo {
 	if m != nil {
-		return m.HostName
-	}
-	return ""
-}
-
-func (m *HeartBeatRequest) GetTime() int64 {
-	if m != nil {
-		return m.Time
-	}
-	return 0
-}
-
-type MonitorInfo struct {
-	Items                []*MonitorItem `protobuf:"bytes,1,rep,name=Items,proto3" json:"Items,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
-	XXX_unrecognized     []byte         `json:"-"`
-	XXX_sizecache        int32          `json:"-"`
-}
-
-func (m *MonitorInfo) Reset()         { *m = MonitorInfo{} }
-func (m *MonitorInfo) String() string { return proto.CompactTextString(m) }
-func (*MonitorInfo) ProtoMessage()    {}
-func (*MonitorInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{3}
-}
-
-func (m *MonitorInfo) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_MonitorInfo.Unmarshal(m, b)
-}
-func (m *MonitorInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_MonitorInfo.Marshal(b, m, deterministic)
-}
-func (m *MonitorInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MonitorInfo.Merge(m, src)
-}
-func (m *MonitorInfo) XXX_Size() int {
-	return xxx_messageInfo_MonitorInfo.Size(m)
-}
-func (m *MonitorInfo) XXX_DiscardUnknown() {
-	xxx_messageInfo_MonitorInfo.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MonitorInfo proto.InternalMessageInfo
-
-func (m *MonitorInfo) GetItems() []*MonitorItem {
-	if m != nil {
-		return m.Items
+		return m.Jobs
 	}
 	return nil
 }
 
-type MonitorItem struct {
-	TaskId                    int64           `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	ExecIntervalSecond        int64           `protobuf:"varint,2,opt,name=exec_interval_second,json=execIntervalSecond,proto3" json:"exec_interval_second,omitempty"`
-	Type                      MonitorItemType `protobuf:"varint,3,opt,name=type,proto3,enum=MonitorItemType" json:"type,omitempty"`
-	SelfFunc                  SelfMonitorFunc `protobuf:"varint,4,opt,name=self_func,json=selfFunc,proto3,enum=SelfMonitorFunc" json:"self_func,omitempty"`
-	SelfFuncConfig            string          `protobuf:"bytes,5,opt,name=self_func_config,json=selfFuncConfig,proto3" json:"self_func_config,omitempty"`
-	ThirdPartyFuncName        string          `protobuf:"bytes,6,opt,name=third_party_func_name,json=thirdPartyFuncName,proto3" json:"third_party_func_name,omitempty"`
-	ThirdPartyDependencyFiles string          `protobuf:"bytes,7,opt,name=third_party_dependency_files,json=thirdPartyDependencyFiles,proto3" json:"third_party_dependency_files,omitempty"`
-	XXX_NoUnkeyedLiteral      struct{}        `json:"-"`
-	XXX_unrecognized          []byte          `json:"-"`
-	XXX_sizecache             int32           `json:"-"`
-}
-
-func (m *MonitorItem) Reset()         { *m = MonitorItem{} }
-func (m *MonitorItem) String() string { return proto.CompactTextString(m) }
-func (*MonitorItem) ProtoMessage()    {}
-func (*MonitorItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{4}
-}
-
-func (m *MonitorItem) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_MonitorItem.Unmarshal(m, b)
-}
-func (m *MonitorItem) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_MonitorItem.Marshal(b, m, deterministic)
-}
-func (m *MonitorItem) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MonitorItem.Merge(m, src)
-}
-func (m *MonitorItem) XXX_Size() int {
-	return xxx_messageInfo_MonitorItem.Size(m)
-}
-func (m *MonitorItem) XXX_DiscardUnknown() {
-	xxx_messageInfo_MonitorItem.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MonitorItem proto.InternalMessageInfo
-
-func (m *MonitorItem) GetTaskId() int64 {
+func (m *HeartBeatRequest) GetClientTime() int64 {
 	if m != nil {
-		return m.TaskId
+		return m.ClientTime
 	}
 	return 0
 }
 
-func (m *MonitorItem) GetExecIntervalSecond() int64 {
+type JobRunningInfo struct {
+	JobID                string          `protobuf:"bytes,1,opt,name=jobID,proto3" json:"jobID,omitempty"`
+	State                JobRunningState `protobuf:"varint,2,opt,name=state,proto3,enum=JobRunningState" json:"state,omitempty"`
+	ErrorMsg             string          `protobuf:"bytes,3,opt,name=errorMsg,proto3" json:"errorMsg,omitempty"`
+	LastRunningTime      int64           `protobuf:"varint,4,opt,name=lastRunningTime,proto3" json:"lastRunningTime,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *JobRunningInfo) Reset()         { *m = JobRunningInfo{} }
+func (m *JobRunningInfo) String() string { return proto.CompactTextString(m) }
+func (*JobRunningInfo) ProtoMessage()    {}
+func (*JobRunningInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{3}
+}
+
+func (m *JobRunningInfo) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_JobRunningInfo.Unmarshal(m, b)
+}
+func (m *JobRunningInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_JobRunningInfo.Marshal(b, m, deterministic)
+}
+func (m *JobRunningInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_JobRunningInfo.Merge(m, src)
+}
+func (m *JobRunningInfo) XXX_Size() int {
+	return xxx_messageInfo_JobRunningInfo.Size(m)
+}
+func (m *JobRunningInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_JobRunningInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_JobRunningInfo proto.InternalMessageInfo
+
+func (m *JobRunningInfo) GetJobID() string {
 	if m != nil {
-		return m.ExecIntervalSecond
+		return m.JobID
+	}
+	return ""
+}
+
+func (m *JobRunningInfo) GetState() JobRunningState {
+	if m != nil {
+		return m.State
+	}
+	return JobRunningState_OK
+}
+
+func (m *JobRunningInfo) GetErrorMsg() string {
+	if m != nil {
+		return m.ErrorMsg
+	}
+	return ""
+}
+
+func (m *JobRunningInfo) GetLastRunningTime() int64 {
+	if m != nil {
+		return m.LastRunningTime
 	}
 	return 0
-}
-
-func (m *MonitorItem) GetType() MonitorItemType {
-	if m != nil {
-		return m.Type
-	}
-	return MonitorItemType_SELF
-}
-
-func (m *MonitorItem) GetSelfFunc() SelfMonitorFunc {
-	if m != nil {
-		return m.SelfFunc
-	}
-	return SelfMonitorFunc_CPU
-}
-
-func (m *MonitorItem) GetSelfFuncConfig() string {
-	if m != nil {
-		return m.SelfFuncConfig
-	}
-	return ""
-}
-
-func (m *MonitorItem) GetThirdPartyFuncName() string {
-	if m != nil {
-		return m.ThirdPartyFuncName
-	}
-	return ""
-}
-
-func (m *MonitorItem) GetThirdPartyDependencyFiles() string {
-	if m != nil {
-		return m.ThirdPartyDependencyFiles
-	}
-	return ""
 }
 
 type HeartBeatResponse struct {
-	ServerId             string       `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	ConfigVersion        string       `protobuf:"bytes,2,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
-	ConfigChangeTime     int64        `protobuf:"varint,3,opt,name=config_change_time,json=configChangeTime,proto3" json:"config_change_time,omitempty"`
-	MonitorInfo          *MonitorInfo `protobuf:"bytes,4,opt,name=monitor_info,json=monitorInfo,proto3" json:"monitor_info,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
-	XXX_unrecognized     []byte       `json:"-"`
-	XXX_sizecache        int32        `json:"-"`
+	ServerId             string   `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	ConfigVersion        int64    `protobuf:"varint,2,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	ServerTime           int32    `protobuf:"varint,3,opt,name=serverTime,proto3" json:"serverTime,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *HeartBeatResponse) Reset()         { *m = HeartBeatResponse{} }
 func (m *HeartBeatResponse) String() string { return proto.CompactTextString(m) }
 func (*HeartBeatResponse) ProtoMessage()    {}
 func (*HeartBeatResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{5}
+	return fileDescriptor_33c57e4bae7b9afd, []int{4}
 }
 
 func (m *HeartBeatResponse) XXX_Unmarshal(b []byte) error {
@@ -383,25 +320,18 @@ func (m *HeartBeatResponse) GetServerId() string {
 	return ""
 }
 
-func (m *HeartBeatResponse) GetConfigVersion() string {
+func (m *HeartBeatResponse) GetConfigVersion() int64 {
 	if m != nil {
 		return m.ConfigVersion
-	}
-	return ""
-}
-
-func (m *HeartBeatResponse) GetConfigChangeTime() int64 {
-	if m != nil {
-		return m.ConfigChangeTime
 	}
 	return 0
 }
 
-func (m *HeartBeatResponse) GetMonitorInfo() *MonitorInfo {
+func (m *HeartBeatResponse) GetServerTime() int32 {
 	if m != nil {
-		return m.MonitorInfo
+		return m.ServerTime
 	}
-	return nil
+	return 0
 }
 
 type RegisterRequest struct {
@@ -415,7 +345,8 @@ type RegisterRequest struct {
 	KernelVersion        string                       `protobuf:"bytes,8,opt,name=kernelVersion,proto3" json:"kernelVersion,omitempty"`
 	VirtualizationSystem string                       `protobuf:"bytes,9,opt,name=virtualizationSystem,proto3" json:"virtualizationSystem,omitempty"`
 	VirtualizationRole   string                       `protobuf:"bytes,10,opt,name=virtualizationRole,proto3" json:"virtualizationRole,omitempty"`
-	Interfaces           []*RegisterRequest_Interface `protobuf:"bytes,111,rep,name=Interfaces,proto3" json:"Interfaces,omitempty"`
+	Interfaces           []*RegisterRequest_Interface `protobuf:"bytes,11,rep,name=Interfaces,proto3" json:"Interfaces,omitempty"`
+	AgentVersion         string                       `protobuf:"bytes,12,opt,name=agentVersion,proto3" json:"agentVersion,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                     `json:"-"`
 	XXX_unrecognized     []byte                       `json:"-"`
 	XXX_sizecache        int32                        `json:"-"`
@@ -425,7 +356,7 @@ func (m *RegisterRequest) Reset()         { *m = RegisterRequest{} }
 func (m *RegisterRequest) String() string { return proto.CompactTextString(m) }
 func (*RegisterRequest) ProtoMessage()    {}
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{6}
+	return fileDescriptor_33c57e4bae7b9afd, []int{5}
 }
 
 func (m *RegisterRequest) XXX_Unmarshal(b []byte) error {
@@ -523,6 +454,13 @@ func (m *RegisterRequest) GetInterfaces() []*RegisterRequest_Interface {
 	return nil
 }
 
+func (m *RegisterRequest) GetAgentVersion() string {
+	if m != nil {
+		return m.AgentVersion
+	}
+	return ""
+}
+
 type RegisterRequest_Interface struct {
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	HardwareAddr         string   `protobuf:"bytes,2,opt,name=hardwareAddr,proto3" json:"hardwareAddr,omitempty"`
@@ -536,7 +474,7 @@ func (m *RegisterRequest_Interface) Reset()         { *m = RegisterRequest_Inter
 func (m *RegisterRequest_Interface) String() string { return proto.CompactTextString(m) }
 func (*RegisterRequest_Interface) ProtoMessage()    {}
 func (*RegisterRequest_Interface) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{6, 0}
+	return fileDescriptor_33c57e4bae7b9afd, []int{5, 0}
 }
 
 func (m *RegisterRequest_Interface) XXX_Unmarshal(b []byte) error {
@@ -580,7 +518,7 @@ func (m *RegisterRequest_Interface) GetIpAddrs() []string {
 
 type RegisterResponse struct {
 	AgentId              string   `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	ConfigVersion        string   `protobuf:"bytes,2,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	ConfigVersion        int64    `protobuf:"varint,2,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -590,7 +528,7 @@ func (m *RegisterResponse) Reset()         { *m = RegisterResponse{} }
 func (m *RegisterResponse) String() string { return proto.CompactTextString(m) }
 func (*RegisterResponse) ProtoMessage()    {}
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{7}
+	return fileDescriptor_33c57e4bae7b9afd, []int{6}
 }
 
 func (m *RegisterResponse) XXX_Unmarshal(b []byte) error {
@@ -618,82 +556,531 @@ func (m *RegisterResponse) GetAgentId() string {
 	return ""
 }
 
-func (m *RegisterResponse) GetConfigVersion() string {
+func (m *RegisterResponse) GetConfigVersion() int64 {
 	if m != nil {
 		return m.ConfigVersion
+	}
+	return 0
+}
+
+type Job struct {
+	JobID                string    `protobuf:"bytes,1,opt,name=jobID,proto3" json:"jobID,omitempty"`
+	RunnerType           JobRunner `protobuf:"varint,2,opt,name=runnerType,proto3,enum=JobRunner" json:"runnerType,omitempty"`
+	RunnerModule         string    `protobuf:"bytes,3,opt,name=runnerModule,proto3" json:"runnerModule,omitempty"`
+	ModuleVersion        string    `protobuf:"bytes,4,opt,name=moduleVersion,proto3" json:"moduleVersion,omitempty"`
+	Interval             int32     `protobuf:"varint,5,opt,name=interval,proto3" json:"interval,omitempty"`
+	Config               string    `protobuf:"bytes,6,opt,name=config,proto3" json:"config,omitempty"`
+	CreateTime           int32     `protobuf:"varint,7,opt,name=createTime,proto3" json:"createTime,omitempty"`
+	UpdateTime           int32     `protobuf:"varint,8,opt,name=updateTime,proto3" json:"updateTime,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
+}
+
+func (m *Job) Reset()         { *m = Job{} }
+func (m *Job) String() string { return proto.CompactTextString(m) }
+func (*Job) ProtoMessage()    {}
+func (*Job) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{7}
+}
+
+func (m *Job) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Job.Unmarshal(m, b)
+}
+func (m *Job) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Job.Marshal(b, m, deterministic)
+}
+func (m *Job) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Job.Merge(m, src)
+}
+func (m *Job) XXX_Size() int {
+	return xxx_messageInfo_Job.Size(m)
+}
+func (m *Job) XXX_DiscardUnknown() {
+	xxx_messageInfo_Job.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Job proto.InternalMessageInfo
+
+func (m *Job) GetJobID() string {
+	if m != nil {
+		return m.JobID
 	}
 	return ""
 }
 
+func (m *Job) GetRunnerType() JobRunner {
+	if m != nil {
+		return m.RunnerType
+	}
+	return JobRunner_Telegraf
+}
+
+func (m *Job) GetRunnerModule() string {
+	if m != nil {
+		return m.RunnerModule
+	}
+	return ""
+}
+
+func (m *Job) GetModuleVersion() string {
+	if m != nil {
+		return m.ModuleVersion
+	}
+	return ""
+}
+
+func (m *Job) GetInterval() int32 {
+	if m != nil {
+		return m.Interval
+	}
+	return 0
+}
+
+func (m *Job) GetConfig() string {
+	if m != nil {
+		return m.Config
+	}
+	return ""
+}
+
+func (m *Job) GetCreateTime() int32 {
+	if m != nil {
+		return m.CreateTime
+	}
+	return 0
+}
+
+func (m *Job) GetUpdateTime() int32 {
+	if m != nil {
+		return m.UpdateTime
+	}
+	return 0
+}
+
+type GetJobsRequest struct {
+	AgentID              string   `protobuf:"bytes,1,opt,name=agentID,proto3" json:"agentID,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetJobsRequest) Reset()         { *m = GetJobsRequest{} }
+func (m *GetJobsRequest) String() string { return proto.CompactTextString(m) }
+func (*GetJobsRequest) ProtoMessage()    {}
+func (*GetJobsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{8}
+}
+
+func (m *GetJobsRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetJobsRequest.Unmarshal(m, b)
+}
+func (m *GetJobsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetJobsRequest.Marshal(b, m, deterministic)
+}
+func (m *GetJobsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetJobsRequest.Merge(m, src)
+}
+func (m *GetJobsRequest) XXX_Size() int {
+	return xxx_messageInfo_GetJobsRequest.Size(m)
+}
+func (m *GetJobsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetJobsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetJobsRequest proto.InternalMessageInfo
+
+func (m *GetJobsRequest) GetAgentID() string {
+	if m != nil {
+		return m.AgentID
+	}
+	return ""
+}
+
+type GetJobsResponse struct {
+	ConfigVersion        int64    `protobuf:"varint,1,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	Jobs                 []*Job   `protobuf:"bytes,2,rep,name=jobs,proto3" json:"jobs,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetJobsResponse) Reset()         { *m = GetJobsResponse{} }
+func (m *GetJobsResponse) String() string { return proto.CompactTextString(m) }
+func (*GetJobsResponse) ProtoMessage()    {}
+func (*GetJobsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{9}
+}
+
+func (m *GetJobsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetJobsResponse.Unmarshal(m, b)
+}
+func (m *GetJobsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetJobsResponse.Marshal(b, m, deterministic)
+}
+func (m *GetJobsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetJobsResponse.Merge(m, src)
+}
+func (m *GetJobsResponse) XXX_Size() int {
+	return xxx_messageInfo_GetJobsResponse.Size(m)
+}
+func (m *GetJobsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetJobsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetJobsResponse proto.InternalMessageInfo
+
+func (m *GetJobsResponse) GetConfigVersion() int64 {
+	if m != nil {
+		return m.ConfigVersion
+	}
+	return 0
+}
+
+func (m *GetJobsResponse) GetJobs() []*Job {
+	if m != nil {
+		return m.Jobs
+	}
+	return nil
+}
+
+type AddJobRequest struct {
+	AgentID              string    `protobuf:"bytes,1,opt,name=agentID,proto3" json:"agentID,omitempty"`
+	RunnerType           JobRunner `protobuf:"varint,2,opt,name=runnerType,proto3,enum=JobRunner" json:"runnerType,omitempty"`
+	RunnerModule         string    `protobuf:"bytes,3,opt,name=runnerModule,proto3" json:"runnerModule,omitempty"`
+	ModuleVersion        string    `protobuf:"bytes,4,opt,name=moduleVersion,proto3" json:"moduleVersion,omitempty"`
+	Interval             int32     `protobuf:"varint,5,opt,name=interval,proto3" json:"interval,omitempty"`
+	Config               string    `protobuf:"bytes,6,opt,name=config,proto3" json:"config,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
+}
+
+func (m *AddJobRequest) Reset()         { *m = AddJobRequest{} }
+func (m *AddJobRequest) String() string { return proto.CompactTextString(m) }
+func (*AddJobRequest) ProtoMessage()    {}
+func (*AddJobRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{10}
+}
+
+func (m *AddJobRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AddJobRequest.Unmarshal(m, b)
+}
+func (m *AddJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AddJobRequest.Marshal(b, m, deterministic)
+}
+func (m *AddJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddJobRequest.Merge(m, src)
+}
+func (m *AddJobRequest) XXX_Size() int {
+	return xxx_messageInfo_AddJobRequest.Size(m)
+}
+func (m *AddJobRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AddJobRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AddJobRequest proto.InternalMessageInfo
+
+func (m *AddJobRequest) GetAgentID() string {
+	if m != nil {
+		return m.AgentID
+	}
+	return ""
+}
+
+func (m *AddJobRequest) GetRunnerType() JobRunner {
+	if m != nil {
+		return m.RunnerType
+	}
+	return JobRunner_Telegraf
+}
+
+func (m *AddJobRequest) GetRunnerModule() string {
+	if m != nil {
+		return m.RunnerModule
+	}
+	return ""
+}
+
+func (m *AddJobRequest) GetModuleVersion() string {
+	if m != nil {
+		return m.ModuleVersion
+	}
+	return ""
+}
+
+func (m *AddJobRequest) GetInterval() int32 {
+	if m != nil {
+		return m.Interval
+	}
+	return 0
+}
+
+func (m *AddJobRequest) GetConfig() string {
+	if m != nil {
+		return m.Config
+	}
+	return ""
+}
+
+type AddJobResponse struct {
+	JobID                string   `protobuf:"bytes,1,opt,name=jobID,proto3" json:"jobID,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *AddJobResponse) Reset()         { *m = AddJobResponse{} }
+func (m *AddJobResponse) String() string { return proto.CompactTextString(m) }
+func (*AddJobResponse) ProtoMessage()    {}
+func (*AddJobResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{11}
+}
+
+func (m *AddJobResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AddJobResponse.Unmarshal(m, b)
+}
+func (m *AddJobResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AddJobResponse.Marshal(b, m, deterministic)
+}
+func (m *AddJobResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddJobResponse.Merge(m, src)
+}
+func (m *AddJobResponse) XXX_Size() int {
+	return xxx_messageInfo_AddJobResponse.Size(m)
+}
+func (m *AddJobResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AddJobResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AddJobResponse proto.InternalMessageInfo
+
+func (m *AddJobResponse) GetJobID() string {
+	if m != nil {
+		return m.JobID
+	}
+	return ""
+}
+
+type DelJobRequest struct {
+	AgentID              string   `protobuf:"bytes,1,opt,name=agentID,proto3" json:"agentID,omitempty"`
+	JobID                string   `protobuf:"bytes,2,opt,name=jobID,proto3" json:"jobID,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DelJobRequest) Reset()         { *m = DelJobRequest{} }
+func (m *DelJobRequest) String() string { return proto.CompactTextString(m) }
+func (*DelJobRequest) ProtoMessage()    {}
+func (*DelJobRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{12}
+}
+
+func (m *DelJobRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DelJobRequest.Unmarshal(m, b)
+}
+func (m *DelJobRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DelJobRequest.Marshal(b, m, deterministic)
+}
+func (m *DelJobRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DelJobRequest.Merge(m, src)
+}
+func (m *DelJobRequest) XXX_Size() int {
+	return xxx_messageInfo_DelJobRequest.Size(m)
+}
+func (m *DelJobRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_DelJobRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DelJobRequest proto.InternalMessageInfo
+
+func (m *DelJobRequest) GetAgentID() string {
+	if m != nil {
+		return m.AgentID
+	}
+	return ""
+}
+
+func (m *DelJobRequest) GetJobID() string {
+	if m != nil {
+		return m.JobID
+	}
+	return ""
+}
+
+type DelJobResponse struct {
+	Deleted              bool     `protobuf:"varint,1,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DelJobResponse) Reset()         { *m = DelJobResponse{} }
+func (m *DelJobResponse) String() string { return proto.CompactTextString(m) }
+func (*DelJobResponse) ProtoMessage()    {}
+func (*DelJobResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{13}
+}
+
+func (m *DelJobResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DelJobResponse.Unmarshal(m, b)
+}
+func (m *DelJobResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DelJobResponse.Marshal(b, m, deterministic)
+}
+func (m *DelJobResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DelJobResponse.Merge(m, src)
+}
+func (m *DelJobResponse) XXX_Size() int {
+	return xxx_messageInfo_DelJobResponse.Size(m)
+}
+func (m *DelJobResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_DelJobResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DelJobResponse proto.InternalMessageInfo
+
+func (m *DelJobResponse) GetDeleted() bool {
+	if m != nil {
+		return m.Deleted
+	}
+	return false
+}
+
+type Foo struct {
+	Bar                  int32                `protobuf:"varint,1,opt,name=bar,proto3" json:"bar,omitempty"`
+	Baz                  *wrappers.Int32Value `protobuf:"bytes,2,opt,name=baz,proto3" json:"baz,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *Foo) Reset()         { *m = Foo{} }
+func (m *Foo) String() string { return proto.CompactTextString(m) }
+func (*Foo) ProtoMessage()    {}
+func (*Foo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{14}
+}
+
+func (m *Foo) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Foo.Unmarshal(m, b)
+}
+func (m *Foo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Foo.Marshal(b, m, deterministic)
+}
+func (m *Foo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Foo.Merge(m, src)
+}
+func (m *Foo) XXX_Size() int {
+	return xxx_messageInfo_Foo.Size(m)
+}
+func (m *Foo) XXX_DiscardUnknown() {
+	xxx_messageInfo_Foo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Foo proto.InternalMessageInfo
+
+func (m *Foo) GetBar() int32 {
+	if m != nil {
+		return m.Bar
+	}
+	return 0
+}
+
+func (m *Foo) GetBaz() *wrappers.Int32Value {
+	if m != nil {
+		return m.Baz
+	}
+	return nil
+}
+
 func init() {
-	proto.RegisterEnum("MonitorItemType", MonitorItemType_name, MonitorItemType_value)
-	proto.RegisterEnum("SelfMonitorFunc", SelfMonitorFunc_name, SelfMonitorFunc_value)
+	proto.RegisterEnum("JobRunningState", JobRunningState_name, JobRunningState_value)
+	proto.RegisterEnum("JobRunner", JobRunner_name, JobRunner_value)
 	proto.RegisterType((*File)(nil), "File")
 	proto.RegisterType((*FileChunk)(nil), "FileChunk")
 	proto.RegisterType((*HeartBeatRequest)(nil), "HeartBeatRequest")
-	proto.RegisterType((*MonitorInfo)(nil), "MonitorInfo")
-	proto.RegisterType((*MonitorItem)(nil), "MonitorItem")
+	proto.RegisterType((*JobRunningInfo)(nil), "JobRunningInfo")
 	proto.RegisterType((*HeartBeatResponse)(nil), "HeartBeatResponse")
 	proto.RegisterType((*RegisterRequest)(nil), "RegisterRequest")
 	proto.RegisterType((*RegisterRequest_Interface)(nil), "RegisterRequest.Interface")
 	proto.RegisterType((*RegisterResponse)(nil), "RegisterResponse")
+	proto.RegisterType((*Job)(nil), "Job")
+	proto.RegisterType((*GetJobsRequest)(nil), "GetJobsRequest")
+	proto.RegisterType((*GetJobsResponse)(nil), "GetJobsResponse")
+	proto.RegisterType((*AddJobRequest)(nil), "AddJobRequest")
+	proto.RegisterType((*AddJobResponse)(nil), "AddJobResponse")
+	proto.RegisterType((*DelJobRequest)(nil), "DelJobRequest")
+	proto.RegisterType((*DelJobResponse)(nil), "DelJobResponse")
+	proto.RegisterType((*Foo)(nil), "Foo")
 }
 
 func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
-	// 815 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x55, 0xef, 0x6e, 0xe3, 0x44,
-	0x10, 0xbf, 0x34, 0x69, 0x1b, 0x4f, 0xd3, 0xc4, 0x1d, 0x1d, 0xc2, 0x17, 0x90, 0xa8, 0x7c, 0x07,
-	0x8a, 0x4e, 0x87, 0xef, 0x1a, 0xbe, 0xf1, 0x05, 0x8e, 0xe6, 0xaa, 0x46, 0xa2, 0xa8, 0x72, 0x53,
-	0x24, 0x3e, 0x80, 0xb5, 0xc4, 0xe3, 0x78, 0x55, 0x7b, 0x37, 0x78, 0x37, 0x3d, 0xc2, 0x03, 0xf0,
-	0x06, 0xbc, 0x0a, 0x2f, 0xc1, 0x4b, 0xa1, 0x5d, 0x6f, 0xfe, 0x34, 0x45, 0xe8, 0x3e, 0x75, 0xe6,
-	0xf7, 0xfb, 0xad, 0x77, 0x3a, 0xbf, 0xd9, 0x09, 0x1c, 0x97, 0xa4, 0x14, 0x9b, 0x51, 0x34, 0xaf,
-	0xa4, 0x96, 0xe1, 0xb7, 0xd0, 0xba, 0xe0, 0x05, 0xe1, 0x27, 0xe0, 0x65, 0xbc, 0xa0, 0x44, 0xb0,
-	0x92, 0x82, 0xc6, 0x69, 0x63, 0xe0, 0xc5, 0x6d, 0x03, 0xfc, 0xc0, 0x4a, 0x4b, 0xaa, 0x9c, 0x9d,
-	0x25, 0x39, 0x53, 0x79, 0xb0, 0x57, 0x93, 0x06, 0xb8, 0x64, 0x2a, 0x0f, 0x3f, 0x03, 0xcf, 0x7c,
-	0xe1, 0x3c, 0x5f, 0x88, 0x3b, 0x44, 0x68, 0xa5, 0x4c, 0x33, 0xfb, 0x85, 0x4e, 0x6c, 0xe3, 0xf0,
-	0x17, 0xf0, 0x2f, 0x89, 0x55, 0xfa, 0x3b, 0x62, 0x3a, 0xa6, 0xdf, 0x16, 0xa4, 0x34, 0x3e, 0x83,
-	0x36, 0x9b, 0x91, 0xd0, 0x09, 0x4f, 0xdd, 0x6d, 0x87, 0x36, 0x1f, 0xa7, 0xe6, 0xb2, 0x5c, 0x2a,
-	0x5d, 0x57, 0xe2, 0x2e, 0x33, 0x80, 0xad, 0x04, 0xa1, 0xa5, 0x79, 0x49, 0x41, 0xf3, 0xb4, 0x31,
-	0x68, 0xc6, 0x36, 0x0e, 0xcf, 0xe0, 0xe8, 0x4a, 0x0a, 0xae, 0x65, 0x35, 0x16, 0x99, 0xc4, 0x10,
-	0xf6, 0xc7, 0x9a, 0x4a, 0x15, 0x34, 0x4e, 0x9b, 0x83, 0xa3, 0x61, 0x27, 0x5a, 0x91, 0x9a, 0xca,
-	0xb8, 0xa6, 0xc2, 0x7f, 0xf6, 0x36, 0x67, 0x34, 0x95, 0xf8, 0x31, 0x1c, 0x6a, 0xa6, 0xee, 0x56,
-	0xd5, 0x34, 0xe3, 0x03, 0x93, 0x8e, 0x53, 0x7c, 0x03, 0x4f, 0xe9, 0x77, 0x9a, 0x26, 0x5c, 0x68,
-	0xaa, 0xee, 0x59, 0x91, 0x28, 0x9a, 0x4a, 0x91, 0xda, 0xba, 0x9a, 0x31, 0x1a, 0x6e, 0xec, 0xa8,
-	0x1b, 0xcb, 0xe0, 0x0b, 0x68, 0xe9, 0xe5, 0xbc, 0xae, 0xb0, 0x3b, 0xf4, 0xb7, 0x6f, 0x9f, 0x2c,
-	0xe7, 0x14, 0x5b, 0x16, 0xbf, 0x04, 0x4f, 0x51, 0x91, 0x25, 0xd9, 0x42, 0x4c, 0x83, 0x96, 0x93,
-	0xde, 0x50, 0x91, 0x39, 0xf9, 0xc5, 0x42, 0x4c, 0xe3, 0xb6, 0x91, 0x98, 0x08, 0x07, 0xe0, 0xaf,
-	0xe5, 0xc9, 0x54, 0x8a, 0x8c, 0xcf, 0x82, 0x7d, 0xdb, 0x9a, 0xee, 0x4a, 0x73, 0x6e, 0x51, 0x3c,
-	0x83, 0x8f, 0x74, 0xce, 0xab, 0x34, 0x99, 0xb3, 0x4a, 0x2f, 0xeb, 0x03, 0xb6, 0x93, 0x07, 0x56,
-	0x8e, 0x96, 0xbc, 0x36, 0x9c, 0x39, 0x64, 0x7b, 0xfa, 0x0d, 0x7c, 0xba, 0x7d, 0x24, 0xa5, 0x39,
-	0x89, 0x94, 0xc4, 0x74, 0x99, 0x98, 0x01, 0x50, 0xc1, 0xa1, 0x3d, 0xf9, 0x6c, 0x73, 0x72, 0xb4,
-	0x56, 0x18, 0xe3, 0x55, 0xf8, 0x77, 0x03, 0x4e, 0xb6, 0x1c, 0x56, 0x73, 0x29, 0x54, 0x3d, 0x34,
-	0x54, 0xdd, 0x53, 0xb5, 0xf1, 0xb8, 0x5d, 0x03, 0xe3, 0x14, 0x3f, 0x87, 0x6e, 0xfd, 0x6f, 0x24,
-	0xf7, 0x54, 0x29, 0x2e, 0x85, 0x73, 0xfa, 0xb8, 0x46, 0x7f, 0xac, 0x41, 0x7c, 0x05, 0xe8, 0x64,
-	0xd3, 0x9c, 0x89, 0x19, 0x25, 0x5b, 0xe6, 0xfb, 0x35, 0x73, 0x6e, 0x89, 0x09, 0x2f, 0x09, 0x5f,
-	0x43, 0xa7, 0xac, 0xdb, 0x97, 0x70, 0x91, 0x49, 0xdb, 0xd7, 0xed, 0x01, 0x10, 0x99, 0x8c, 0x8f,
-	0xca, 0x4d, 0x12, 0xfe, 0xd9, 0x82, 0x5e, 0x4c, 0x33, 0xae, 0x34, 0x55, 0xab, 0xc9, 0x0c, 0xc0,
-	0x4d, 0xe2, 0xe8, 0xe1, 0x60, 0x8e, 0xb0, 0x0f, 0xeb, 0x39, 0x7c, 0x34, 0x97, 0x8e, 0xbb, 0xbd,
-	0x1d, 0x8f, 0x6c, 0x79, 0x8e, 0x33, 0x39, 0x76, 0x61, 0x4f, 0x2a, 0x5b, 0x8c, 0x17, 0xef, 0x49,
-	0x65, 0xb4, 0xf3, 0x82, 0xe9, 0x4c, 0x56, 0xa5, 0x33, 0x71, 0x9d, 0xe3, 0x17, 0xd0, 0x5d, 0xc5,
-	0x17, 0xac, 0xe4, 0xc5, 0xd2, 0xf9, 0xb6, 0x83, 0xe2, 0x00, 0x7a, 0x2b, 0xc4, 0xf5, 0xca, 0xd9,
-	0xb4, 0x0b, 0xe3, 0x0b, 0x38, 0xbe, 0xa3, 0x4a, 0x50, 0xb1, 0xd2, 0xb5, 0xeb, 0x46, 0x3f, 0x00,
-	0x71, 0x08, 0x4f, 0xef, 0x79, 0xa5, 0x17, 0xac, 0xe0, 0x7f, 0x30, 0xcd, 0xa5, 0xb8, 0x59, 0x2a,
-	0x4d, 0x65, 0xe0, 0x59, 0xf1, 0x7f, 0x72, 0x18, 0x01, 0x3e, 0xc4, 0x63, 0x59, 0x50, 0x00, 0xf5,
-	0x9c, 0x3d, 0x66, 0xf0, 0x6b, 0x00, 0xfb, 0x56, 0x32, 0x36, 0x25, 0x15, 0x48, 0xfb, 0x3a, 0xfb,
-	0xd1, 0x4e, 0xff, 0xa3, 0xb5, 0x24, 0xde, 0x52, 0xf7, 0x7f, 0x06, 0x6f, 0x9d, 0x99, 0x25, 0xb0,
-	0xb5, 0xa6, 0x6c, 0x8c, 0x21, 0x74, 0x72, 0x56, 0xa5, 0xef, 0x59, 0x45, 0x6f, 0xd3, 0xb4, 0x72,
-	0x06, 0x3d, 0xc0, 0x8c, 0xb5, 0x7c, 0x6e, 0x22, 0x15, 0x34, 0x4f, 0x9b, 0xc6, 0x5a, 0x97, 0x86,
-	0x13, 0xf0, 0x37, 0x75, 0xb8, 0xf9, 0xfd, 0x9f, 0x15, 0xf5, 0x61, 0xd3, 0xfb, 0xf2, 0x15, 0xf4,
-	0x76, 0x5e, 0x3f, 0xb6, 0xa1, 0x75, 0xf3, 0xee, 0xfb, 0x0b, 0xff, 0x09, 0xf6, 0xe0, 0x68, 0x72,
-	0x39, 0x8e, 0x47, 0xc9, 0xf5, 0xdb, 0x78, 0xf2, 0x93, 0xdf, 0x78, 0xf9, 0x1c, 0x7a, 0x3b, 0x0b,
-	0x00, 0x0f, 0xa1, 0x79, 0x7e, 0x7d, 0xeb, 0x3f, 0x31, 0xc1, 0xd5, 0xbb, 0x2b, 0xbf, 0x31, 0xfc,
-	0xab, 0x01, 0xde, 0xac, 0xe2, 0x62, 0x26, 0xb5, 0x56, 0x38, 0x04, 0x6f, 0xfd, 0xee, 0xf0, 0x24,
-	0xda, 0xdd, 0xb2, 0x7d, 0x8c, 0x1e, 0x3f, 0xcb, 0xe7, 0xd0, 0x19, 0xc9, 0xf7, 0xa2, 0x90, 0x2c,
-	0xb5, 0x8b, 0x7f, 0x3f, 0x32, 0x7f, 0xfa, 0x10, 0xad, 0x97, 0xf8, 0x9b, 0x06, 0xbe, 0x86, 0xf6,
-	0xaa, 0x1f, 0xe8, 0xef, 0x5a, 0xd4, 0x3f, 0x89, 0x76, 0x9b, 0xf5, 0xeb, 0x81, 0xfd, 0x35, 0xf9,
-	0xea, 0xdf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x94, 0x19, 0xeb, 0xf2, 0x5e, 0x06, 0x00, 0x00,
+	// 969 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x56, 0x5f, 0x6f, 0xdb, 0x36,
+	0x10, 0xaf, 0xff, 0x5b, 0x97, 0x58, 0x56, 0x88, 0x62, 0xd0, 0x54, 0xa0, 0x0b, 0xd4, 0x2e, 0x48,
+	0x8d, 0x4d, 0xd9, 0xdc, 0xb7, 0xbd, 0x6c, 0xdd, 0xbc, 0xac, 0xce, 0xd0, 0x0d, 0x50, 0xd3, 0xbe,
+	0x0d, 0x01, 0x1d, 0x9d, 0x65, 0xb5, 0xb2, 0xe8, 0x92, 0x74, 0x82, 0xe4, 0x7d, 0xdf, 0x60, 0x2f,
+	0xfb, 0x0a, 0xfb, 0x3a, 0xfb, 0x42, 0x03, 0x49, 0x51, 0xb1, 0x9c, 0x0c, 0xe9, 0x6b, 0x9f, 0xcc,
+	0xfb, 0xdd, 0x89, 0xe4, 0xdd, 0xef, 0x77, 0x47, 0xc3, 0x60, 0x89, 0x42, 0xd0, 0x14, 0xa3, 0x15,
+	0x67, 0x92, 0x05, 0x8f, 0x53, 0xc6, 0xd2, 0x1c, 0x8f, 0xb4, 0x35, 0x5b, 0xcf, 0x8f, 0x2e, 0x39,
+	0x5d, 0xad, 0x90, 0x0b, 0xe3, 0x0f, 0x7f, 0x80, 0xf6, 0x71, 0x96, 0x23, 0x79, 0x04, 0xce, 0x3c,
+	0xcb, 0xf1, 0xac, 0xa0, 0x4b, 0xf4, 0x1b, 0xfb, 0x8d, 0x43, 0x27, 0xee, 0x2b, 0xe0, 0x37, 0xba,
+	0xd4, 0x4e, 0xb1, 0xa0, 0xdf, 0x9e, 0x2d, 0xa8, 0x58, 0xf8, 0x4d, 0xe3, 0x54, 0xc0, 0x4b, 0x2a,
+	0x16, 0xe1, 0x17, 0xe0, 0xa8, 0x1d, 0x7e, 0x5a, 0xac, 0x8b, 0xf7, 0x84, 0x40, 0x3b, 0xa1, 0x92,
+	0xea, 0x1d, 0x76, 0x63, 0xbd, 0x0e, 0x3f, 0x80, 0xf7, 0x12, 0x29, 0x97, 0x3f, 0x22, 0x95, 0x31,
+	0x7e, 0x58, 0xa3, 0x90, 0xc4, 0x87, 0x1e, 0x4d, 0xb1, 0x90, 0xd3, 0x49, 0x79, 0x98, 0x35, 0xc9,
+	0x13, 0x68, 0xbf, 0x63, 0x33, 0xe1, 0x37, 0xf7, 0x5b, 0x87, 0x3b, 0xe3, 0x61, 0x74, 0xc2, 0x66,
+	0xf1, 0xba, 0x28, 0xb2, 0x22, 0x9d, 0x16, 0x73, 0x16, 0x6b, 0x27, 0x79, 0x0c, 0x70, 0x9e, 0x67,
+	0x58, 0xc8, 0xd3, 0x6c, 0x89, 0x7e, 0x6b, 0xbf, 0x71, 0xd8, 0x8a, 0x37, 0x90, 0xf0, 0xaf, 0x06,
+	0xb8, 0xf5, 0x0f, 0xc9, 0x43, 0xe8, 0xbc, 0x63, 0xb3, 0xea, 0x3c, 0x63, 0x90, 0x03, 0xe8, 0x08,
+	0x49, 0x25, 0xea, 0xac, 0xdc, 0xb1, 0xb7, 0x71, 0xdc, 0x6b, 0x85, 0xc7, 0xc6, 0x4d, 0x02, 0xe8,
+	0x23, 0xe7, 0x8c, 0xbf, 0x12, 0xa9, 0x3e, 0xce, 0x89, 0x2b, 0x9b, 0x1c, 0xc2, 0x30, 0xa7, 0x42,
+	0x96, 0x9f, 0xe9, 0x1b, 0xb5, 0xf5, 0x8d, 0xb6, 0xe1, 0xf0, 0x12, 0xf6, 0x36, 0x2a, 0x21, 0x56,
+	0xac, 0x10, 0xa6, 0xb8, 0xc8, 0x2f, 0x90, 0x9f, 0x65, 0x89, 0xad, 0xbc, 0x01, 0xa6, 0x09, 0xf9,
+	0x12, 0xdc, 0x73, 0x56, 0xcc, 0xb3, 0xf4, 0xec, 0x02, 0xb9, 0xc8, 0x58, 0xa1, 0x2f, 0xda, 0x8a,
+	0x07, 0x06, 0x7d, 0x6b, 0x40, 0x55, 0x0f, 0xf3, 0x49, 0x55, 0x8f, 0x4e, 0xbc, 0x81, 0x84, 0xff,
+	0xb4, 0x61, 0x18, 0x63, 0x9a, 0x09, 0x89, 0xfc, 0x7e, 0x0a, 0x02, 0xe8, 0x2f, 0x98, 0x90, 0x8a,
+	0x7a, 0xcb, 0xb6, 0xb5, 0xad, 0xef, 0xcd, 0x9b, 0xe9, 0xc4, 0x16, 0xc2, 0xda, 0xc4, 0x85, 0x26,
+	0x13, 0x3a, 0x77, 0x27, 0x6e, 0x32, 0xa1, 0x62, 0x57, 0x39, 0x95, 0x73, 0xc6, 0x97, 0x7e, 0xc7,
+	0xc4, 0x5a, 0x9b, 0x1c, 0x80, 0x6b, 0xd7, 0xc7, 0x74, 0x99, 0xe5, 0x57, 0x7e, 0x57, 0x47, 0x6c,
+	0xa1, 0xaa, 0xb8, 0x16, 0x29, 0x93, 0xf5, 0x7b, 0x3a, 0x70, 0x1b, 0x26, 0x4f, 0x61, 0xf0, 0x1e,
+	0x79, 0x81, 0xb9, 0x8d, 0xeb, 0xeb, 0xb8, 0x3a, 0x48, 0xc6, 0xf0, 0xf0, 0x22, 0xe3, 0x72, 0x4d,
+	0xf3, 0xec, 0x9a, 0xca, 0x8c, 0x15, 0xaf, 0xaf, 0x84, 0xc4, 0xa5, 0xef, 0xe8, 0xe0, 0x3b, 0x7d,
+	0x24, 0x02, 0x52, 0xc7, 0x63, 0x96, 0xa3, 0x0f, 0xfa, 0x8b, 0x3b, 0x3c, 0xe4, 0x3b, 0x80, 0x69,
+	0x21, 0x91, 0xcf, 0xe9, 0x39, 0x0a, 0x7f, 0x47, 0x0b, 0x39, 0x88, 0xb6, 0xea, 0x1f, 0x55, 0x21,
+	0xf1, 0x46, 0x34, 0x09, 0x61, 0x57, 0xd3, 0x60, 0x93, 0xd8, 0xd5, 0xa7, 0xd4, 0xb0, 0xe0, 0x0f,
+	0x70, 0xaa, 0x2f, 0x54, 0xc7, 0x6d, 0xf4, 0xac, 0x5e, 0xab, 0x4d, 0x16, 0x94, 0x27, 0x97, 0x94,
+	0xe3, 0x8b, 0x24, 0xe1, 0x25, 0x89, 0x35, 0x4c, 0xd1, 0x9f, 0xad, 0xd4, 0x4a, 0xf8, 0xad, 0xfd,
+	0x96, 0xa2, 0xbf, 0x34, 0xc3, 0x53, 0xf0, 0x6e, 0xee, 0x5a, 0x8a, 0xf4, 0x73, 0xe8, 0xeb, 0x2b,
+	0xdc, 0x68, 0xb4, 0x54, 0xcb, 0xc7, 0x4a, 0x34, 0xfc, 0xb3, 0x09, 0xad, 0x13, 0x36, 0xfb, 0x9f,
+	0x3e, 0x1c, 0x01, 0xf0, 0x75, 0x51, 0x20, 0x3f, 0xbd, 0x5a, 0xd9, 0x66, 0x04, 0xdb, 0x8c, 0xc8,
+	0xe3, 0x0d, 0xaf, 0xca, 0xce, 0x58, 0xaf, 0x58, 0xb2, 0xce, 0xb1, 0x94, 0x61, 0x0d, 0x53, 0x62,
+	0x58, 0xea, 0x95, 0xad, 0xa3, 0x51, 0x65, 0x1d, 0x54, 0x02, 0xcd, 0x54, 0x21, 0x2f, 0x68, 0xae,
+	0x05, 0xda, 0x89, 0x2b, 0x9b, 0x7c, 0x06, 0x5d, 0x93, 0x40, 0x29, 0xcc, 0xd2, 0xd2, 0xa3, 0x87,
+	0x23, 0x95, 0xa8, 0x5b, 0xad, 0x67, 0x5a, 0xed, 0x06, 0x51, 0xfe, 0xf5, 0x2a, 0xb1, 0xfe, 0xbe,
+	0xf1, 0xdf, 0x20, 0xe1, 0x08, 0xdc, 0x5f, 0x50, 0x9e, 0xb0, 0x99, 0xb8, 0xb7, 0x11, 0xc3, 0x18,
+	0x86, 0x55, 0x6c, 0x49, 0xc4, 0xed, 0x6a, 0x37, 0xee, 0x1a, 0x08, 0x7e, 0x6d, 0x8a, 0xb6, 0x75,
+	0x25, 0x35, 0x12, 0xfe, 0xdb, 0x80, 0xc1, 0x8b, 0x24, 0x51, 0xc0, 0xbd, 0x83, 0xe0, 0x93, 0x61,
+	0x25, 0x3c, 0x00, 0xd7, 0x26, 0x55, 0x16, 0xea, 0x4e, 0x9d, 0x85, 0xdf, 0xc3, 0x60, 0x82, 0xf9,
+	0x47, 0x25, 0x5f, 0x6d, 0xd0, 0xdc, 0xdc, 0x60, 0x04, 0xae, 0xdd, 0xa0, 0x3c, 0xc8, 0x87, 0x5e,
+	0x82, 0x39, 0x4a, 0x34, 0x9d, 0xd1, 0x8f, 0xad, 0x19, 0x1e, 0x43, 0xeb, 0x98, 0x31, 0xe2, 0x41,
+	0x6b, 0x46, 0xb9, 0x76, 0x76, 0x62, 0xb5, 0x24, 0x5f, 0x2b, 0xe4, 0x5a, 0x6f, 0xbc, 0x33, 0x7e,
+	0x14, 0x99, 0x27, 0x3a, 0xb2, 0x4f, 0xb4, 0x9a, 0x0c, 0xcf, 0xc7, 0x6f, 0x69, 0xbe, 0x46, 0x15,
+	0x7e, 0x3d, 0x7a, 0x0a, 0xc3, 0xad, 0x67, 0x89, 0x74, 0xa1, 0xf9, 0xfb, 0xaf, 0xde, 0x03, 0xe2,
+	0x40, 0xe7, 0x67, 0xf5, 0x0e, 0x79, 0x8d, 0xd1, 0x01, 0x38, 0x15, 0x33, 0x64, 0x17, 0xfa, 0xa7,
+	0x98, 0x63, 0xca, 0xe9, 0xdc, 0x7b, 0x40, 0x76, 0xa0, 0x37, 0xa1, 0x92, 0x26, 0x2c, 0xf5, 0x1a,
+	0xe3, 0xbf, 0x9b, 0xe0, 0xa4, 0x3c, 0x2b, 0x52, 0x26, 0xa5, 0x20, 0x63, 0x70, 0xaa, 0x27, 0x89,
+	0xec, 0x45, 0xdb, 0x0f, 0x75, 0x40, 0xa2, 0xdb, 0x2f, 0xd6, 0x13, 0xd8, 0x9d, 0xb0, 0xcb, 0x22,
+	0x67, 0x34, 0xd1, 0xff, 0x1d, 0x3a, 0x91, 0xfa, 0x09, 0x20, 0xaa, 0xfe, 0x07, 0x7c, 0xd3, 0x20,
+	0x47, 0xd0, 0xb7, 0x53, 0x84, 0x78, 0xdb, 0xc3, 0x2f, 0xd8, 0x8b, 0x6e, 0x8d, 0x98, 0xaf, 0xa0,
+	0x57, 0x8a, 0x9d, 0x0c, 0xa3, 0x7a, 0x8b, 0x04, 0x5e, 0xb4, 0xdd, 0x07, 0xcf, 0xa0, 0x6b, 0x08,
+	0x27, 0x6e, 0x54, 0x93, 0x73, 0x30, 0x8c, 0xb6, 0x94, 0xf0, 0x0c, 0xba, 0x86, 0x32, 0xe2, 0x46,
+	0x35, 0xf2, 0x83, 0x61, 0x54, 0xe7, 0x72, 0xd6, 0xd5, 0x1c, 0x3c, 0xff, 0x2f, 0x00, 0x00, 0xff,
+	0xff, 0x1c, 0x5e, 0xa1, 0x61, 0x45, 0x09, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -711,6 +1098,9 @@ type GringottsClient interface {
 	HeartBeat(ctx context.Context, in *HeartBeatRequest, opts ...grpc.CallOption) (*HeartBeatResponse, error)
 	DownloadFile(ctx context.Context, in *File, opts ...grpc.CallOption) (Gringotts_DownloadFileClient, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	GetJobs(ctx context.Context, in *GetJobsRequest, opts ...grpc.CallOption) (*GetJobsResponse, error)
+	AddJob(ctx context.Context, in *AddJobRequest, opts ...grpc.CallOption) (*AddJobResponse, error)
+	DelJob(ctx context.Context, in *DelJobRequest, opts ...grpc.CallOption) (*DelJobResponse, error)
 }
 
 type gringottsClient struct {
@@ -771,11 +1161,41 @@ func (c *gringottsClient) Register(ctx context.Context, in *RegisterRequest, opt
 	return out, nil
 }
 
+func (c *gringottsClient) GetJobs(ctx context.Context, in *GetJobsRequest, opts ...grpc.CallOption) (*GetJobsResponse, error) {
+	out := new(GetJobsResponse)
+	err := c.cc.Invoke(ctx, "/gringotts/GetJobs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gringottsClient) AddJob(ctx context.Context, in *AddJobRequest, opts ...grpc.CallOption) (*AddJobResponse, error) {
+	out := new(AddJobResponse)
+	err := c.cc.Invoke(ctx, "/gringotts/AddJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gringottsClient) DelJob(ctx context.Context, in *DelJobRequest, opts ...grpc.CallOption) (*DelJobResponse, error) {
+	out := new(DelJobResponse)
+	err := c.cc.Invoke(ctx, "/gringotts/DelJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GringottsServer is the server API for Gringotts service.
 type GringottsServer interface {
 	HeartBeat(context.Context, *HeartBeatRequest) (*HeartBeatResponse, error)
 	DownloadFile(*File, Gringotts_DownloadFileServer) error
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	GetJobs(context.Context, *GetJobsRequest) (*GetJobsResponse, error)
+	AddJob(context.Context, *AddJobRequest) (*AddJobResponse, error)
+	DelJob(context.Context, *DelJobRequest) (*DelJobResponse, error)
 }
 
 // UnimplementedGringottsServer can be embedded to have forward compatible implementations.
@@ -790,6 +1210,15 @@ func (*UnimplementedGringottsServer) DownloadFile(req *File, srv Gringotts_Downl
 }
 func (*UnimplementedGringottsServer) Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (*UnimplementedGringottsServer) GetJobs(ctx context.Context, req *GetJobsRequest) (*GetJobsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetJobs not implemented")
+}
+func (*UnimplementedGringottsServer) AddJob(ctx context.Context, req *AddJobRequest) (*AddJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddJob not implemented")
+}
+func (*UnimplementedGringottsServer) DelJob(ctx context.Context, req *DelJobRequest) (*DelJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DelJob not implemented")
 }
 
 func RegisterGringottsServer(s *grpc.Server, srv GringottsServer) {
@@ -853,6 +1282,60 @@ func _Gringotts_Register_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Gringotts_GetJobs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetJobsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GringottsServer).GetJobs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gringotts/GetJobs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GringottsServer).GetJobs(ctx, req.(*GetJobsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Gringotts_AddJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GringottsServer).AddJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gringotts/AddJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GringottsServer).AddJob(ctx, req.(*AddJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Gringotts_DelJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GringottsServer).DelJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gringotts/DelJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GringottsServer).DelJob(ctx, req.(*DelJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Gringotts_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gringotts",
 	HandlerType: (*GringottsServer)(nil),
@@ -864,6 +1347,18 @@ var _Gringotts_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _Gringotts_Register_Handler,
+		},
+		{
+			MethodName: "GetJobs",
+			Handler:    _Gringotts_GetJobs_Handler,
+		},
+		{
+			MethodName: "AddJob",
+			Handler:    _Gringotts_AddJob_Handler,
+		},
+		{
+			MethodName: "DelJob",
+			Handler:    _Gringotts_DelJob_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

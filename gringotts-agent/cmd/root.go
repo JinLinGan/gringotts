@@ -14,7 +14,7 @@ func Execute() {
 		Short: "Gringotts Agent",
 		Long:  `Gringotts Agent`,
 	}
-	rootCmd.AddCommand(newStartCmd())
+	rootCmd.AddCommand(newStartCmd(), newJobCmd())
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}

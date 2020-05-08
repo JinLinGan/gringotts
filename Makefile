@@ -39,12 +39,23 @@ run-agent-docker: build-agent-linux create-docker-network
 		--network gringotts \
 		harbor.gk8s.ete.ffcs.cn/gringotts/devtool:latest start
 
+run-server-docker: build-server-linux create-docker-network
+	-docker rm -f server
+	docker run \
+		--entrypoint /gringotts/bin/server \
+		-v /Users/jinlin/code/golang/src/github.com/jinlingan/gringotts/build/bin:/gringotts/bin \
+		--name server \
+		-p 6666:6666 \
+		--network gringotts \
+		harbor.gk8s.ete.ffcs.cn/gringotts/devtool:latest start
+
 run-debug-agent-docker: build-agent-linux create-docker-network
 	-docker rm -f agent
 	docker run -d --entrypoint dlv \
   		--network gringotts \
 		-p 2345:2345 \
  		-v /Users/jinlin/code/golang/src/github.com/jinlingan/gringotts/build/bin:/gringotts/bin  \
+ 		-v /Users/jinlin/code/golang/src/github.com/jinlingan/gringotts/temp/agentfile:/var/gringotts/gringotts-agent \
  		--name agent harbor.gk8s.ete.ffcs.cn/gringotts/devtool:latest  \
  		--listen=:2345 --headless=true --api-version=2 --accept-multiclient exec /gringotts/bin/agent start
 
@@ -53,6 +64,7 @@ run-debug-server-docker: build-server-linux create-docker-network
 	docker run -d --entrypoint dlv \
 		--network gringotts \
 		-p 2346:2346 \
+		-p 6666:6666 \
   		-v /Users/jinlin/code/golang/src/github.com/jinlingan/gringotts/build/bin:/gringotts/bin  \
   		--name server harbor.gk8s.ete.ffcs.cn/gringotts/devtool:latest  \
   		--listen=:2346 --headless=true --api-version=2 --accept-multiclient exec /gringotts/bin/server start

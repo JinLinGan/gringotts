@@ -2,12 +2,16 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"os"
-	"strconv"
 	"sync"
 	"time"
+
+	"github.com/jinlingan/gringotts/gringotts-server/service/jobmanager"
+	"github.com/jinlingan/gringotts/gringotts-server/store/job"
 
 	"github.com/jinlingan/gringotts/gringotts-server/store/host"
 
@@ -25,11 +29,81 @@ import (
 // GringottsServer 服务器
 type GringottsServer struct {
 	sync.RWMutex
-	grServer    *grpc.Server
-	config      *config.ServerConfig
-	logger      log.Logger
-	db          *sqlx.DB
-	hostService model.HostService
+	grServer   *grpc.Server
+	config     *config.ServerConfig
+	logger     log.Logger
+	db         *sqlx.DB
+	hostStore  model.HostStore
+	jobStore   model.JobStore
+	jobManager model.JobManagerService
+}
+
+func (s *GringottsServer) AddJob(ctx context.Context, req *message.AddJobRequest) (*message.AddJobResponse, error) {
+	agent, err := s.hostStore.Find(req.AgentID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("查找 Agent（%q）失败", req.AgentID))
+	}
+	if agent == nil {
+		return nil, errors.Errorf("未找到 Agent（%q）", req.AgentID)
+	}
+
+	job, err := model.NewJobFromGRPC(req)
+	if err != nil {
+		return nil, err
+	}
+
+	jobID, err := s.jobManager.CreateJobForAgent(req.AgentID, job)
+	if err != nil {
+		return nil, err
+	}
+
+	return &message.AddJobResponse{
+		JobID: jobID,
+	}, nil
+
+}
+
+func (s *GringottsServer) DelJob(ctx context.Context, req *message.DelJobRequest) (*message.DelJobResponse, error) {
+
+	agent, err := s.hostStore.Find(req.AgentID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("查找 Agent（%q）失败", req.AgentID))
+	}
+	if agent == nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("未找到 Agent（%q）", req.AgentID))
+	}
+
+	//TODO:判断任务是否存在，是否属于对应 agent
+	err = s.jobManager.DeleteJobForAgent(req.AgentID, req.JobID)
+	if err != nil {
+		return nil, err
+	}
+	return &message.DelJobResponse{
+		Deleted: true,
+	}, nil
+}
+
+func (s *GringottsServer) GetJobs(ctx context.Context, req *message.GetJobsRequest) (*message.GetJobsResponse, error) {
+	agent, err := s.hostStore.Find(req.AgentID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("查找 Agent（%q）失败", req.AgentID))
+	}
+	if agent == nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("未找到 Agent（%q）", req.AgentID))
+	}
+
+	jobs, err := s.jobStore.GetJobs(req.AgentID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("查找 Agent（%q）任务失败", req.AgentID))
+	}
+	return NewGetJobsGRPCResp(jobs, agent.ConfigVersion), nil
+}
+
+func NewGetJobsGRPCResp(jobs []*model.Job, configVersion int64) *message.GetJobsResponse {
+	return &message.GetJobsResponse{
+		ConfigVersion: configVersion,
+		Jobs:          model.NewGRPCJobs(jobs),
+	}
 }
 
 //NewServer 新建 Server 对象
@@ -41,13 +115,17 @@ func NewServer(cfg *config.ServerConfig, logger log.Logger) (*GringottsServer, e
 	if err != nil {
 		return nil, errors.Wrap(err, "open database error")
 	}
-
+	h := host.New(db)
+	j := job.New(db)
+	jm := jobmanager.New(j, h)
 	server := &GringottsServer{
-		grServer:    grpc.NewServer(),
-		config:      cfg,
-		logger:      logger,
-		db:          db,
-		hostService: host.New(db),
+		grServer:   grpc.NewServer(),
+		config:     cfg,
+		logger:     logger,
+		db:         db,
+		hostStore:  h,
+		jobStore:   j,
+		jobManager: jm,
 	}
 	message.RegisterGringottsServer(server.grServer, server)
 	return server, nil
@@ -68,8 +146,31 @@ func (s *GringottsServer) Serve() error {
 //HeartBeat 接收心跳
 func (s *GringottsServer) HeartBeat(ctx context.Context,
 	req *message.HeartBeatRequest) (*message.HeartBeatResponse, error) {
-	s.logger.Debugf("get HeartBeat message from agent(id=%s,hostname=%s)", req.GetAgentId(), req.GetHostName())
-	return s.newHeartBeatResponse(), nil
+	agentID := req.GetAgentID()
+	if agentID == "" {
+		return nil, errors.Errorf("agent ID 为 %q 不合法", agentID)
+	}
+	s.logger.Debugf("get HeartBeat message from agent(id=%s)", req.GetAgentID())
+
+	ok, err := s.hostStore.Exist(agentID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("查询 agent ID %q 是否存在失败 ", agentID))
+	}
+
+	if !ok {
+		return nil, errors.Errorf("agent ID %q 不存在", agentID)
+	}
+	err = s.hostStore.UpdateHeartBeatTime(agentID, time.Now().Unix())
+
+	configVersion, err := s.hostStore.GetConfigVersion(agentID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("获取 Agent（%q) 配置版本号失败", agentID))
+	}
+	return &message.HeartBeatResponse{
+		ServerId:      s.config.GetExternalAddress(),
+		ConfigVersion: configVersion,
+		//MonitorInfo:   getAllTaskByAgentID(),
+	}, nil
 }
 
 //DownloadFile 下载文件
@@ -115,227 +216,92 @@ func (s *GringottsServer) getHostByID(id string) (*[]model.Host, error) {
 }
 
 func (s *GringottsServer) addNewAgent(h *model.Host) (string, error) {
-	return h.AgentID, s.hostService.Create(context.Background(), h)
+	return s.hostStore.Create(h)
 }
 
-// Register agent 注册 - 暂未实现
+// Register agent 注册，说明文档 https://docs.google.com/drawings/d/1jFwqKoWa-JNRlh52ZKseSTheOajAmV2WIoVD6dV5p9Q/edit?usp=sharing
 func (s *GringottsServer) Register(ctx context.Context,
 	req *message.RegisterRequest) (*message.RegisterResponse, error) {
+
+	reqJSON, _ := json.Marshal(req)
 	h := model.NewHostFromGRPC(req)
-	// TODO:查询原有 Agent 信息 是否改成 count 或判断具体异常
-	agent, err := s.hostService.Find(context.Background(), h.AgentID)
+
+	s.logger.Debugf("收到注册消息：%s", reqJSON)
+
+	agent, err := s.hostStore.Find(h.AgentID)
 	if err != nil {
+		s.logger.Errorf("使用 AgentID %q 查找已注册 Agent 失败，注册信息为 %s : %s", req.AgentID, reqJSON, err)
 
 		return nil, errors.Wrap(err, "注册 Agent 失败")
 	}
+
+	if agent == nil {
+		s.logger.Infof("AgentID %q 未找到已注册 Agent", req.AgentID)
+	}
 	// 如果AgentID 不存在
 	if req.AgentID == "" || agent == nil {
-		//TODO:最好判断一下数据库中是否存在完全一样的刚刚注册（未发送心跳)的 Agent
-		//TODO:可能在同时启动多个 agent 的时候分配一样 AgentID，好像还是在数据库中多点冗余数据来的安全
 		newAgentID, err := s.addNewAgent(h)
 		if err != nil {
+			s.logger.Errorf("注册新 Agent 失败，注册信息为 %s : %s", reqJSON, err)
 			return nil, errors.Wrap(err, "注册 Agent 失败")
 		}
+
 		return &message.RegisterResponse{
 			AgentId:       newAgentID,
-			ConfigVersion: "000",
+			ConfigVersion: 0,
 		}, nil
 	}
-	change, acceptable, msg := model.CheckHostChanceAcceptable(agent, h)
-	if !change {
+
+	allSame, acceptable, msg := model.CheckHostChanceAcceptable(agent, h)
+	if allSame {
+		s.logger.Debug("agent 信息没有任何变更")
+		v, err := s.hostStore.GetConfigVersion(h.AgentID)
+
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("获取 agent(%q) 版本错误", h.AgentID))
+		}
 		return &message.RegisterResponse{
 			AgentId:       h.AgentID,
-			ConfigVersion: "000",
+			ConfigVersion: v,
 		}, nil
 	}
 
 	if !acceptable {
 
-		//TODO:对于未注册成功的 Agent 可以记录信息，支持在线手动迁移 Agent 可以一直尝试注册
-		return nil, errors.Errorf("agent %q 注册失败：", req.AgentID, msg)
+		//TODO:对于未注册成功的 Agent 可以记录信息，支持在线手动迁移，类似有一个半成功的状态 Agent 可以一直尝试注册
+		s.logger.Errorf("Agent %q 注册失败，Agent 提交的信息变更太多：%s", req.AgentID, msg)
+
+		return nil, errors.Errorf("Agent %q 注册失败，Agent 提交的信息变更太多：%s", req.AgentID, msg)
 	}
 
 	// 更新信息
 
+	s.logger.Debug("agent 信息有变更但是可接收，记录变更信息")
+
+	err = s.hostStore.UpdateAgentInfo(h)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("发现agent(%q)配置更新并且可以接受，但是更新配置时发生错误", h.AgentID))
+	}
+
+	v, err := s.hostStore.GetConfigVersion(h.AgentID)
+
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("获取 agent(%q) 版本错误", h.AgentID))
+	}
+
 	return &message.RegisterResponse{
 		AgentId:       h.AgentID,
-		ConfigVersion: "000",
+		ConfigVersion: v,
 	}, nil
 
-	//如果AgentID 不为空
-	// 如果Agent信息不匹配
-	//
-	//// 更新Agent信息
-	////TODO:返回正确的 ConfigVersion
-	//
-	////hosts,notFindNetInfo, err := s.findHost(req.NetInfo)
-	//hosts, _, err := s.findHost(req.NetInfo)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "look up hosts by interface info fail")
-	//}
-	//if len(hosts) > 1 {
-	//	return nil, errors.Errorf("find multiple host: %s", spew.Sdump(hosts))
-	//}
-	//
-	//if len(hosts) == 1 {
-	//	//如果请求中的 HostId == 0 ，说明客户端是新注册的，那找到主机就是不对的
-	//	if req.HostId == "" {
-	//		return nil, errors.Errorf("find registered host: %s", spew.Sdump(hosts))
-	//	}
-	//	//如果只返回一个主机并且 id 一样，注册成功
-	//	if req.HostId == strconv.FormatUint(uint64(hosts[0].ID), 10) {
-	//		//TODO:是否要更新主机信息？
-	//		return &message.RegisterResponse{AgentId: req.HostId, ConfigVersion: "0"}, nil
-	//	}
-	//}
-	//
-	////没有找到主机的情况
-	////如果没有发送 ID 说明是新注册
-	//if req.HostId == "" {
-	//	//注册主机
-	//	h := s.GetHostByRegisterReq(req)
-	//	h, err := s.RegisterHost(h)
-	//	if err != nil {
-	//		return nil, errors.Wrapf(err, "register host %s fail", spew.Sdump(req))
-	//	}
-	//	return &message.RegisterResponse{
-	//		AgentId:       strconv.FormatUint(uint64(h.ID), 10),
-	//		ConfigVersion: "0",
-	//	}, nil
-	//}
-
 }
 
-//// GetHostByRegisterReq 从注册请求中获取主机对象
-//func (s *GringottsServer) GetHostByRegisterReq(req *message.RegisterRequest) *model.Host {
-//	h := &model.Host{HostName: req.GetHostName()}
-//	for _, value := range req.NetInfo {
-//		h.HostInterface = append(
-//			h.HostInterface,
-//			&model.HostInterface{
-//				HWAddr:        value.MacAddress,
-//				IPAddress:     value.IpAddress,
-//				InterfaceName: value.InterfaceName,
-//			})
+//func (s *GringottsServer) newHeartBeatResponse() *message.HeartBeatResponse {
+//	resp := &message.HeartBeatResponse{
+//		ServerId:      s.config.GetExternalAddress(),
+//		ConfigVersion: ,
+//		//MonitorInfo:   getAllTaskByAgentID(),
 //	}
-//	return h
-//}
-
-//// RegisterHost 注册主机
-//func (s *GringottsServer) RegisterHost(host *model.Host) (*model.Host, error) {
-//
-//	if r := s.db.Create(host); r.Error != nil {
-//		return nil, errors.Wrapf(r.Error, "register host %s fail", spew.Sdump(host))
-//	}
-//	return host, nil
+//	return resp
 //
 //}
-
-//// findHost 使用网卡信息查找主机，返回主机对象以及未找到匹配项的网卡信息
-//func (s *GringottsServer) findHost(
-//	net []*message.RegisterRequest_NetInfo,
-//) (
-//	[]*model.Host,
-//	[]*message.RegisterRequest_NetInfo,
-//	error,
-//) {
-//
-//	notFind := make([]*message.RegisterRequest_NetInfo, len(net))
-//	var hosts []*model.Host
-//
-//	for _, value := range net {
-//		h, err := s.findHostsByInterface(value)
-//		if err != nil {
-//			return nil, nil, err
-//		}
-//		if h != nil {
-//			hosts = appendHosts(hosts, h...)
-//		} else {
-//			notFind = append(notFind, value)
-//		}
-//	}
-//	return hosts, notFind, nil
-//}
-
-//// appendHost 添加 host 到 slice 中，并且避免重复
-//func appendHost(hostSlice []*model.Host, host *model.Host) []*model.Host {
-//	//TODO:是否要判断 nil？
-//	//if host == nil {
-//	//	return hostSlice
-//	//}
-//	find := false
-//	for _, value := range hostSlice {
-//		if value.ID == host.ID {
-//			find = true
-//			break
-//		}
-//	}
-//
-//	if !find {
-//		return append(hostSlice, host)
-//	}
-//	return hostSlice
-//}
-
-//// appendHost 添加 host 到 slice 中，并且避免重复
-//func appendHosts(hostSlice []*model.Host, hosts ...*model.Host) []*model.Host {
-//	for _, value := range hosts {
-//		hostSlice = appendHost(hostSlice, value)
-//	}
-//	return hostSlice
-//}
-
-//// findHostByInterface 使用网卡信息查找主机
-//func (s *GringottsServer) findHostsByInterface(inf *message.RegisterRequest_NetInfo) ([]*model.Host, error) {
-//	var results []*model.Host
-//
-//	if r := s.db.Preload("HostInterface").
-//		Table("host").
-//		Joins("left join host_interface on host_interface.host_id = host.id").
-//		Where("host_interface.hw_addr = ?", inf.MacAddress).
-//		Find(&results); r.Error != nil {
-//
-//		return nil, errors.Wrapf(r.Error, "find hosts by mac address %q fail", inf.MacAddress)
-//	}
-//	return results, nil
-//}
-
-func (s *GringottsServer) newHeartBeatResponse() *message.HeartBeatResponse {
-	resp := &message.HeartBeatResponse{
-		ServerId:      s.config.GetExternalAddress(),
-		ConfigVersion: strconv.Itoa(time.Now().Minute()),
-		MonitorInfo:   getAllTaskByAgentID(),
-	}
-	return resp
-
-}
-
-func getAllTaskByAgentID() *message.MonitorInfo {
-	taskInfoOne := message.MonitorInfo{
-		Items: []*message.MonitorItem{
-			{
-				TaskId:             1,
-				ExecIntervalSecond: 10,
-				Type:               message.MonitorItemType_SELF,
-				SelfFunc:           message.SelfMonitorFunc_CPU,
-			},
-		},
-	}
-
-	taskInfoTwo := message.MonitorInfo{
-		Items: []*message.MonitorItem{
-			{
-				TaskId:             2,
-				ExecIntervalSecond: 10,
-				Type:               message.MonitorItemType_SELF,
-				SelfFunc:           message.SelfMonitorFunc_MEM,
-			},
-		},
-	}
-
-	if time.Now().Minute()%2 == 0 {
-		return &taskInfoTwo
-	}
-
-	return &taskInfoOne
-}

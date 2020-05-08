@@ -9,10 +9,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jinlingan/gringotts/gringotts-agent/global"
+
 	"github.com/jinlingan/gringotts/gringotts-agent/communication"
 	"github.com/jinlingan/gringotts/gringotts-agent/config"
+	"github.com/jinlingan/gringotts/gringotts-agent/forwarder"
 	"github.com/jinlingan/gringotts/gringotts-agent/model"
+	"github.com/jinlingan/gringotts/gringotts-agent/scheduler"
 	"github.com/jinlingan/gringotts/pkg/log"
+	"github.com/jinlingan/gringotts/pkg/message"
 	"github.com/jinlingan/gringotts/pkg/metadata/host"
 	"github.com/pkg/errors"
 )
@@ -20,11 +25,13 @@ import (
 // Agent Gringotts Agent
 type Agent struct {
 	sync.RWMutex
-	cfg          *config.AgentConfig
-	apiClient    *communication.Client
-	logger       log.Logger
-	isRegistered bool
-	agentInfo    agentRunningInfo
+	cfg           *config.AgentConfig
+	apiClient     *communication.Client
+	logger        log.Logger
+	isRegistered  bool
+	agentInfo     agentRunningInfo
+	dataForwarder *forwarder.Forwarder
+	jobScheduler  scheduler.Scheduler
 }
 
 //var _ io.Writer = &Agent{}
@@ -38,7 +45,7 @@ const registerInterval = time.Second * 5
 // agentRunningInfo 保存了 agentID 和 配置版本
 type agentRunningInfo struct {
 	AgentID       string
-	ConfigVersion string
+	ConfigVersion int64
 }
 
 // NewAgent 新建 Agent
@@ -65,6 +72,7 @@ func (a *Agent) register() (*model.RegisterResp, error) {
 		case <-t:
 			return nil, errors.Errorf("注册超时，当前超时时间为 %.f 秒", registerTimeOut.Seconds())
 		default:
+			a.logger.Infof("发送注册信息，AgentID = %q，信息 %s", a.agentInfo.AgentID, info)
 			resp, err := a.apiClient.Register(a.agentInfo.AgentID, info)
 			if err == nil {
 				return resp, err
@@ -79,8 +87,9 @@ func (a *Agent) register() (*model.RegisterResp, error) {
 // Start 启动 Agent
 func (a *Agent) Start() error {
 	stop := make(chan int, 1)
-	agentInfo, err := a.getAgentIDFormWorkDir()
 
+	// 加载本地 Agent 信息
+	agentInfo, err := a.getAgentIDFormWorkDir()
 	if err != nil {
 		a.logger.Infof("read agent info failed so set state unregistered. Caused by: %v", err)
 		a.isRegistered = false
@@ -88,32 +97,71 @@ func (a *Agent) Start() error {
 		a.isRegistered = true
 		a.agentInfo = *agentInfo
 	}
+
+	//Agent 注册
 	resp, err := a.register()
 	if err != nil {
 		a.logger.Errorf("register agent to server %s fail", a.cfg.GetServerAddress())
 		return errors.New("start agent fail")
 	}
-
-	a.logger.Infof("获取到 AgentID=%s，ConfigVersion=%s", resp.AgentID, resp.ConfigVersion)
-
+	a.logger.Infof("获取到 AgentID=%s，ConfigVersion=%d", resp.AgentID, resp.ConfigVersion)
+	a.agentInfo.AgentID = resp.AgentID
 	err = a.saveRegisterInfo(resp)
 
 	if err != nil {
 		a.logger.Errorf("保存注册信息失败. Caused by: %v", err)
 		return errors.New("start agent fail")
 	}
+
+	// 初始化组件
+	a.dataForwarder = forwarder.NewForwarder()
+	go a.dataForwarder.Run()
+	fIn := a.dataForwarder.GetInputChannel()
+	global.GlobalSenderPool = global.NewGlobalSenderPool(fIn, a.logger)
+	a.jobScheduler = scheduler.NewJobScheduler(a.logger)
+
+	a.logger.Infof("开始加载配置")
+	conf, err := a.loadJobConfig()
+	if err != nil {
+		a.logger.Errorf("获取配置失败: %v", err)
+	}
+	a.ProcessConf(conf)
+	a.logger.Infof("加载配置结束")
+
+	// NewForwarder
+
 	//开始发送心跳
 	go a.sendHeartBeat()
+
+	//TODO:优雅退出
 	<-stop
 	return nil
 }
+func (a *Agent) ProcessConf(conf *message.GetJobsResponse) {
+	//spew.Dump(conf)
+	a.logger.Debugf("收到任务信息 %s", conf)
+	jobs := model.GetJobsFromGRPC(conf.Jobs)
 
+	//spew.Dump(jobs)
+
+	a.jobScheduler.ReloadConfig(jobs)
+
+	a.logger.Debugf("已经加载配置版本 %d", conf.ConfigVersion)
+	a.agentInfo.ConfigVersion = conf.ConfigVersion
+}
+
+func (a *Agent) loadJobConfig() (*message.GetJobsResponse, error) {
+	return a.apiClient.LoadConfig(a.agentInfo.AgentID)
+
+}
+
+//TODO:添加一个函数保存部分信息，并且加锁
 func (a *Agent) saveRegisterInfo(info *model.RegisterResp) error {
 	path := a.cfg.GetAgentRunningInfoFilePath()
 
 	agentInfo := agentRunningInfo{
-		AgentID:       info.AgentID,
-		ConfigVersion: info.ConfigVersion,
+		AgentID: info.AgentID,
+		//ConfigVersion: info.ConfigVersion,
 	}
 	b, err := json.Marshal(agentInfo)
 	if err != nil {
@@ -150,9 +198,16 @@ func (a *Agent) sendHeartBeat() {
 
 			a.logger.Infof("get HeartBeat response from server(id=%s) with config version = %d", r.ServerId, r.ConfigVersion)
 			a.logger.Infof("not equal local version %d , reload", a.GetConfigVersion())
-			// processConfig(r.MonitorInfo)
-			if a.SetConfigVersion(r.ConfigVersion) != nil {
-				a.logger.Errorf("set config version error: %s", err)
+			a.logger.Infof("开始加载配置")
+			conf, err := a.loadJobConfig()
+			if err != nil {
+				a.logger.Errorf("获取配置失败: %v", err)
+			} else {
+				a.ProcessConf(conf)
+				a.logger.Infof("加载配置结束")
+				if a.SetConfigVersion(r.ConfigVersion) != nil {
+					a.logger.Errorf("set config version error: %s", err)
+				}
 			}
 			//TODO: stop agent
 
@@ -190,14 +245,14 @@ func (a *Agent) GetAgentID() string {
 }
 
 // GetConfigVersion 获取配置版本
-func (a *Agent) GetConfigVersion() string {
+func (a *Agent) GetConfigVersion() int64 {
 	a.RLock()
 	defer a.RUnlock()
 	return a.agentInfo.ConfigVersion
 }
 
 // SetConfigVersion 设置配置版本
-func (a *Agent) SetConfigVersion(v string) error {
+func (a *Agent) SetConfigVersion(v int64) error {
 
 	a.Lock()
 	a.agentInfo.ConfigVersion = v
